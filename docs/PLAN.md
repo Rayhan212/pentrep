@@ -287,7 +287,12 @@ Runnable at the end: `pentrep build examples/findings.yaml -f html -f md` produc
   > note: the override mechanism came from M5.3/M5.8, so the override test passed on the first run. Its
   > cover fixture is in `tests/fixtures/templates/`. A doc test checks that `docs/templates.md` names every context
   > key, every view field, every filter and every built-in partial, so the doc cannot drift from the code.
-- [ ] M5.12 verify: `uv run pytest && uv run pentrep build examples/findings.yaml -f html -f md -o tmp/m5` (exit 0; `tmp/m5/pentest-report.{html,md}` and `tmp/m5/assets/` exist; `grep -c "REDACTED" tmp/m5/pentest-report.html` ≥ 6); golden tests pass on ubuntu and macOS in CI
+- [x] M5.12 verify: `uv run pytest && uv run pentrep build examples/findings.yaml -f html -f md -o tmp/m5` (exit 0; `tmp/m5/pentest-report.{html,md}` and `tmp/m5/assets/` exist; `grep -c "REDACTED" tmp/m5/pentest-report.html` ≥ 6); golden tests pass on ubuntu and macOS in CI
+  > note: (2026-11-26): passed. Locally: 890 tests, 98.45 % coverage. `build examples/findings.yaml -f html -f md
+  > -o tmp/m5` exits 0 and writes both files plus `assets/`. The plan's `grep -c "REDACTED"` counts lines and prints 5,
+  > because one evidence line holds three tokens; all 6 values are redacted (one `[REDACTED:…]` token per pattern).
+  > CI run 45766141610 on `m5-render` is green, 13/13 jobs, so the golden files pass unchanged on ubuntu-22.04,
+  > ubuntu-24.04 and macos-latest.
 
 ## M6 — PDF export
 Runnable at the end: `pentrep build examples/findings.yaml` (default `-f all`) produces HTML, MD and PDF.
