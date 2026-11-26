@@ -37,7 +37,10 @@ Runnable at the end: `uv run pentrep --version`, `uv run pentrep --help`, CI gre
   > (same as CI). Generic hooks come from `pre-commit/pre-commit-hooks` v6.0.0.
 - [x] M1.8 CI workflow: uv setup; ruff, mypy and pytest with the coverage gate; matrix Python 3.11–3.14 × {ubuntu-22.04, ubuntu-24.04, macos-latest}; install Pango (apt / brew) now so the PDF jobs later need no CI changes
   files: `.github/workflows/ci.yml`
-- [ ] M1.9 verify: `uv run ruff check . && uv run ruff format --check . && uv run mypy src && uv run pytest && uv run pentrep --version` all pass locally, and the CI run on GitHub is green for all matrix jobs
+  > note: `libharfbuzz-subset0` doesn't exist on Ubuntu 22.04, so it's installed only when available (plus `libharfbuzz0b`).
+  > Typer forces colour when `GITHUB_ACTIONS`/`FORCE_COLOR`/`PY_COLORS` is set, so CLI tests remove those vars.
+- [x] M1.9 verify: `uv run ruff check . && uv run ruff format --check . && uv run mypy src && uv run pytest && uv run pentrep --version` all pass locally, and the CI run on GitHub is green for all matrix jobs
+  > note (2026-11-26): passed locally (18 tests, 97.96 % coverage) and in CI run 45738160801 (13/13 jobs green).
 
 ## M2 — Schema, loader & `init` / `validate` / `schema`
 Runnable at the end: `pentrep init`, then `pentrep validate` with file:line:col errors, and `pentrep schema`.
