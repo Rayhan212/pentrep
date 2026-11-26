@@ -1,0 +1,2 @@
+e302_path_traversal.yaml:30:15: error[E302] findings[0].evidence[0].path: path '../valid/evidence/pt-001-sqlmap.png' resolves outside the project directory
+✗ e302_path_traversal.yaml is invalid: 1 error, 0 warnings

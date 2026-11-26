@@ -1,0 +1,2 @@
+e303_unsupported_type.yaml:30:15: error[E303] findings[0].evidence[0].path: unsupported file type for 'evidence/not-an-image.png' (found unknown; expected PNG, JPEG, GIF or WebP)
+✗ e303_unsupported_type.yaml is invalid: 1 error, 0 warnings

@@ -1,0 +1,7 @@
+{% macro draft_banner(redaction) -%}
+{% if redaction.unredacted %}<p class="draft-banner">{{ redaction.banner }}</p>
+{% endif %}
+{%- endmacro %}
+{% macro badge(severity) -%}
+<span class="badge badge-{{ severity.label | lower }}">{{ severity.label }}</span>
+{%- endmacro %}

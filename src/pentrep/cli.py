@@ -2,14 +2,25 @@
 
 from __future__ import annotations
 
+import json
+import re
+import shutil
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
+from enum import StrEnum
+from importlib import resources
+from pathlib import Path
+from typing import Annotated, Final
 
 import typer
 
 from pentrep import __version__
-from pentrep.diagnostics import ExitCode
+from pentrep.diagnostics import ExitCode, format_json, format_text
+from pentrep.loader import load_report
+from pentrep.models import json_schema
+from pentrep.redact import format_summary, redact_report
+from pentrep.stats import breakdown, compute_stats
 
 
 @dataclass
@@ -52,6 +63,270 @@ def root(
 ) -> None:
     """Turn findings.yaml into professional pentest reports (HTML, PDF, Markdown)."""
     _state.debug = debug
+
+
+CURRENT_DIR: Final = Path(".")
+SCAFFOLD_FILES: Final = ("findings.yaml", "assets/logo.png", "evidence/pt-001-sqlmap.png")
+
+
+def _fail(message: str, code: ExitCode) -> typer.Exit:
+    """Print ``message`` to stderr and return an Exit to raise."""
+    typer.echo(message, err=True)
+    return typer.Exit(code)
+
+
+@app.command()
+def init(
+    directory: Annotated[
+        Path, typer.Argument(help="Directory to create the project in (created if missing).")
+    ] = CURRENT_DIR,
+    force: Annotated[
+        bool, typer.Option("--force", help="Overwrite files that already exist.")
+    ] = False,
+) -> None:
+    """Create an example findings.yaml with a logo and an evidence image (FR-01)."""
+    targets = [directory / name for name in SCAFFOLD_FILES]
+    conflicts = [t for t in targets if t.exists() or t.is_symlink()]
+    if conflicts and not force:
+        listing = "\n".join(f"  {c}" for c in conflicts)
+        raise _fail(
+            f"error: these files already exist (use --force to overwrite):\n{listing}",
+            ExitCode.VALIDATION_FAILED,
+        )
+    scaffold = resources.files("pentrep") / "scaffold"
+    try:
+        for name, target in zip(SCAFFOLD_FILES, targets, strict=True):
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(scaffold.joinpath(name).read_bytes())
+            typer.echo(f"Created {target}")
+    except OSError as exc:
+        raise _fail(f"error: cannot write to {directory}: {exc}", ExitCode.RENDER_ERROR) from None
+    typer.echo(f"Next: pentrep validate {targets[0]}")
+
+
+class OutputFormat(StrEnum):
+    """Output formats for ``validate``."""
+
+    TEXT = "text"
+    JSON = "json"
+
+
+def _count(n: int, noun: str) -> str:
+    return f"{n} {noun}" if n == 1 else f"{n} {noun}s"
+
+
+@app.command()
+def validate(
+    file: Annotated[
+        Path,
+        typer.Argument(
+            help="The findings.yaml file to check.", exists=True, dir_okay=False, readable=True
+        ),
+    ],
+    strict: Annotated[bool, typer.Option("--strict", help="Treat warnings as errors.")] = False,
+    output_format: Annotated[
+        OutputFormat,
+        typer.Option("--format", help="Print diagnostics as text (stderr) or JSON (stdout)."),
+    ] = OutputFormat.TEXT,
+) -> None:
+    """Check FILE against the schema and report every error and warning (FR-02)."""
+    name = str(file)
+    result = load_report(file, display=name)
+    errors, warnings = len(result.errors), len(result.warnings)
+    failed = bool(errors) or (strict and bool(warnings))
+    if output_format is OutputFormat.JSON:
+        typer.echo(format_json(result.diagnostics))
+    else:
+        for diagnostic in result.diagnostics:
+            typer.echo(format_text(diagnostic), err=True)
+        summary = f"{_count(errors, 'error')}, {_count(warnings, 'warning')}"
+        if failed:
+            note = " (--strict treats warnings as errors)" if not errors else ""
+            typer.echo(f"✗ {name} is invalid: {summary}{note}", err=True)
+        else:
+            report_findings = result.report.findings if result.report else []
+            findings = _count(len(report_findings), "finding")
+            if report_findings:
+                findings += f" ({breakdown(compute_stats(report_findings))})"
+            typer.echo(f"✓ {name} is valid: {findings}, {_count(warnings, 'warning')}")
+            if result.report is not None:
+                _, redaction = redact_report(result.report)
+                for line in format_summary(redaction, preview=True):
+                    typer.echo(line)
+    if failed:
+        raise typer.Exit(ExitCode.VALIDATION_FAILED)
+
+
+@app.command()
+def schema(
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Write the schema to FILE instead of stdout."),
+    ] = None,
+) -> None:
+    """Print the JSON Schema (draft 2020-12) for findings.yaml (FR-04)."""
+    text = json.dumps(json_schema(), indent=2, ensure_ascii=False) + "\n"
+    if output is None:
+        typer.echo(text, nl=False)
+        return
+    try:
+        output.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise _fail(f"error: cannot write {output}: {exc}", ExitCode.RENDER_ERROR) from None
+    typer.echo(f"Wrote {output}")
+
+
+class BuildFormat(StrEnum):
+    """Output formats for ``build`` (FR-03)."""
+
+    HTML = "html"
+    PDF = "pdf"
+    MD = "md"
+    ALL = "all"
+
+
+class Paper(StrEnum):
+    """PDF page sizes (``--paper``)."""
+
+    A4 = "a4"
+    LETTER = "letter"
+
+
+NAME_RE: Final = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
+DEFAULT_OUTPUT_DIR: Final = Path("report")
+DRAFT_WARNING: Final = (
+    "warning: redaction is disabled; the report is marked UNREDACTED DRAFT \N{EN DASH} "
+    "DO NOT DISTRIBUTE"
+)
+
+
+def _check_name(name: str) -> str:
+    if not NAME_RE.match(name) or name in {".", ".."}:
+        raise typer.BadParameter("must match ^[A-Za-z0-9._-]{1,100}$")
+    return name
+
+
+def _size(n: int) -> str:
+    return f"{n} B" if n < 1024 else f"{n / 1024:.1f} KB"
+
+
+@app.command()
+def build(
+    file: Annotated[
+        Path,
+        typer.Argument(
+            help="The findings.yaml file to render.", exists=True, dir_okay=False, readable=True
+        ),
+    ],
+    formats: Annotated[
+        list[BuildFormat] | None,
+        typer.Option("--format", "-f", help="html, pdf, md or all; repeatable. Default: all."),
+    ] = None,
+    output_dir: Annotated[
+        Path, typer.Option("--output-dir", "-o", help="Directory for the report files.")
+    ] = DEFAULT_OUTPUT_DIR,
+    name: Annotated[
+        str,
+        typer.Option(
+            "--name", "-n", callback=_check_name, help="Output file name without extension."
+        ),
+    ] = "pentest-report",
+    template_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--template-dir",
+            exists=True,
+            file_okay=False,
+            help="Templates that override the theme.",
+        ),
+    ] = None,
+    paper: Annotated[Paper, typer.Option("--paper", help="PDF page size.")] = Paper.A4,
+    no_redact: Annotated[
+        bool, typer.Option("--no-redact", help="Disable redaction (marks an UNREDACTED DRAFT).")
+    ] = False,
+    strict: Annotated[bool, typer.Option("--strict", help="Fail on validation warnings.")] = False,
+    quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Print only errors.")] = False,
+) -> None:
+    """Validate FILE and render the report as HTML, Markdown and PDF (FR-03)."""
+    import jinja2  # imported lazily so --help stays fast (NFR-04)
+
+    from pentrep.render.html import render_html
+    from pentrep.render.md import render_md
+    from pentrep.render.pdf import RenderError, render_pdf
+
+    wanted = set(formats or [BuildFormat.ALL])
+    if BuildFormat.ALL in wanted:
+        wanted = {BuildFormat.HTML, BuildFormat.MD, BuildFormat.PDF}
+
+    result = load_report(file, display=str(file))
+    failed = bool(result.errors) or (strict and bool(result.warnings))
+    for diagnostic in result.diagnostics:
+        if failed or not quiet or diagnostic.code.level.value == "error":
+            typer.echo(format_text(diagnostic), err=True)
+    if failed or result.report is None:
+        errors, warnings = len(result.errors), len(result.warnings)
+        typer.echo(
+            f"✗ {file} is invalid: {_count(errors, 'error')}, {_count(warnings, 'warning')}",
+            err=True,
+        )
+        raise typer.Exit(ExitCode.VALIDATION_FAILED)
+
+    report, summary = redact_report(result.report, enabled=False if no_redact else None)
+    if not summary.enabled:
+        typer.echo(DRAFT_WARNING, err=True)
+    base_dir = file.parent
+    outputs: list[tuple[Path, bytes]] = []
+    copies: list[tuple[Path, Path]] = []
+    html = ""
+    try:
+        if wanted & {BuildFormat.HTML, BuildFormat.PDF}:
+            html = render_html(report, summary, base_dir, template_dir)
+        if BuildFormat.HTML in wanted:
+            outputs.append((output_dir / f"{name}.html", html.encode("utf-8")))
+        if BuildFormat.MD in wanted:
+            markdown = render_md(report, summary, base_dir, template_dir)
+            outputs.append((output_dir / f"{name}.md", markdown.text.encode("utf-8")))
+            copies.extend((source, output_dir / relative) for source, relative in markdown.assets)
+    except jinja2.TemplateError as exc:
+        raise _fail(f"error: template error: {exc}", ExitCode.RENDER_ERROR) from None
+    written = _write_outputs(outputs, copies, output_dir)
+    pdf_error: RenderError | None = None
+    if BuildFormat.PDF in wanted:
+        try:
+            pdf_bytes = render_pdf(html, paper=paper.value)
+        except RenderError as exc:
+            pdf_error = exc
+        else:
+            written += _write_outputs([(output_dir / f"{name}.pdf", pdf_bytes)], [], output_dir)
+    if not quiet:
+        for path in written:
+            typer.echo(f"Wrote {path.as_posix()} ({_size(path.stat().st_size)})")
+        for line in format_summary(summary):
+            typer.echo(line)
+    if pdf_error is not None:
+        written_note = " (the other requested formats were written)" if written else ""
+        raise _fail(
+            f"error: {pdf_error}{written_note}\n  hint: {pdf_error.hint}", ExitCode.RENDER_ERROR
+        )
+
+
+def _write_outputs(
+    outputs: list[tuple[Path, bytes]], copies: list[tuple[Path, Path]], output_dir: Path
+) -> list[Path]:
+    """Write files and copy assets; an OSError becomes exit code 3."""
+    written: list[Path] = []
+    try:
+        for path, data in outputs:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+            written.append(path)
+        for source, target in copies:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+            written.append(target)
+    except OSError as exc:
+        raise _fail(f"error: cannot write to {output_dir}: {exc}", ExitCode.RENDER_ERROR) from None
+    return written
 
 
 def run(cli_app: typer.Typer, argv: Sequence[str]) -> int:

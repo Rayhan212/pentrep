@@ -1,0 +1,2 @@
+e301_file_not_found.yaml:30:15: error[E301] findings[0].evidence[0].path: file 'evidence/missing.png' not found
+✗ e301_file_not_found.yaml is invalid: 1 error, 0 warnings

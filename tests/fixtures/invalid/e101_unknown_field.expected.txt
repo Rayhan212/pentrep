@@ -1,0 +1,4 @@
+e101_unknown_field.yaml:18:5: error[E102] findings[0].remediation: missing required field 'remediation'
+e101_unknown_field.yaml:33:5: error[E101] findings[0].remediaton: unknown field 'remediaton'; did you mean 'remediation'?
+  hint: allowed fields: affected_assets, cvss_vector, cwe, description, evidence, id, impact, references, remediation, severity, status, steps_to_reproduce, title
+✗ e101_unknown_field.yaml is invalid: 2 errors, 0 warnings

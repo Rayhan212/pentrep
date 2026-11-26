@@ -1,0 +1,119 @@
+schema_version: 1
+
+engagement:
+  title: "Web Application Penetration Test – Acme Customer Portal"
+  client:
+    name: "Acme Corp"
+    contact: "Jane Doe, CISO"
+  testers:
+    - name: "Alex Tester"
+      email: "alex@example-security.test"
+      role: "Lead Penetration Tester"
+  start_date: 2026-11-02
+  end_date: 2026-11-13
+  report_date: 2026-11-20
+  report_version: "1.0"
+  classification: "CONFIDENTIAL"
+  scope:
+    in_scope:
+      - asset: "https://portal.acme.example"
+        type: url
+      - asset: "203.0.113.10"
+        type: ip
+        notes: "Production API host"
+    out_of_scope:
+      - asset: "https://status.acme.example"
+        type: url
+        notes: "Hosted by a third party"
+  methodology: |
+    Testing followed the **OWASP Web Security Testing Guide v4.2** as a
+    grey-box assessment with two standard-user accounts supplied by Acme.
+  executive_summary: |
+    The portal's authentication layer is vulnerable to SQL injection, which
+    allows an unauthenticated attacker to take over any account. Immediate
+    remediation of PT-001 is recommended.
+
+branding:
+  company_name: "Example Security Labs"
+  logo: assets/logo.png
+  accent_color: "#1F4E79"
+
+redaction:
+  enabled: true
+  custom_patterns:
+    - name: ACME_EMPLOYEE_ID
+      regex: 'ACME-\d{6}'
+  allowlist:
+    - "attacker@example-security.test"
+
+findings:
+  - id: PT-001
+    title: "SQL Injection in Login Endpoint"
+    cvss_vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+    status: open
+    cwe: [89]
+    affected_assets:
+      - "https://portal.acme.example/api/v1/login"
+    description: |
+      The `username` field of the JSON login request is concatenated into a
+      SQL query without parameterisation.
+    impact: |
+      An unauthenticated attacker can bypass authentication as any user,
+      including administrators, and read or modify the entire database.
+    steps_to_reproduce:
+      - "Send the request shown in Evidence 1 to `/api/v1/login`."
+      - "Observe that a valid session for the `admin` user is returned."
+    evidence:
+      - type: http
+        caption: "Boolean-based payload returns an admin session"
+        content: |
+          POST /api/v1/login HTTP/1.1
+          Host: portal.acme.example
+          Content-Type: application/json
+
+          {"username":"admin' OR '1'='1' -- ","password":"x"}
+
+          HTTP/1.1 200 OK
+          Set-Cookie: session=9f8e7d6c5b4a3921; Path=/; HttpOnly; Secure
+          Content-Type: application/json
+
+          {"token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiJ9.c2lnbmF0dXJl","email":"admin@acme.example","staff_id":"ACME-104233"}
+      - type: image
+        caption: "sqlmap enumerating database tables"
+        path: evidence/pt-001-sqlmap.png
+    remediation: |
+      Use parameterised queries (prepared statements) for all database access
+      and add a WAF rule as defence in depth until the fix is deployed.
+    references:
+      - "https://owasp.org/www-community/attacks/SQL_Injection"
+      - "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+
+  - id: PT-002
+    title: "Reflected Cross-Site Scripting in Search"
+    cvss_vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"
+    status: open
+    cwe: [79]
+    affected_assets:
+      - "https://portal.acme.example/search?q="
+    description: |
+      The `q` parameter is reflected into the results page without output
+      encoding, allowing arbitrary JavaScript to run in the victim's browser.
+    impact: |
+      An attacker who tricks a logged-in user into opening a crafted link can
+      perform actions as that user and read data shown in the page.
+    steps_to_reproduce:
+      - "Log in as any user."
+      - "Open `https://portal.acme.example/search?q=<svg/onload=alert(document.domain)>`."
+      - "Observe the alert box showing `portal.acme.example`."
+    evidence:
+      - type: text
+        caption: "Reflected payload in the HTML response (internal debug header included)"
+        language: html
+        content: |
+          X-Backend-Host: 10.20.0.15
+          <div class="results">No results for <svg/onload=alert(document.domain)></div>
+    remediation: |
+      Apply context-aware output encoding to all reflected input and deploy a
+      Content-Security-Policy that disallows inline scripts.
+    references:
+      - "https://owasp.org/www-community/attacks/xss/"

@@ -1,0 +1,17 @@
+{% from "partials/macros.html.j2" import draft_banner %}
+<header class="cover" id="cover">
+{% if branding.logo_path %}
+<img class="logo" src="{{ image_src(branding.logo_path, branding.logo_mime, branding.logo_asset_name) }}" alt="{{ branding.company_name or engagement.client.name }} logo">
+{% endif %}
+{% if branding.company_name %}
+<p class="company">{{ branding.company_name }}</p>
+{% endif %}
+{{ draft_banner(redaction) }}
+<h1>{{ engagement.title }}</h1>
+<dl>
+<dt>Client</dt><dd>{{ engagement.client.name }}</dd>
+<dt>Report date</dt><dd>{{ engagement.report_date }}</dd>
+<dt>Version</dt><dd>Version {{ engagement.report_version }}</dd>
+<dt>Classification</dt><dd class="classification">{{ engagement.classification }}</dd>
+</dl>
+</header>

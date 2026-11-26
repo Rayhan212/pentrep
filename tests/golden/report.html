@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="pentrep <PENTREP_VERSION>">
+<title>Web Application Penetration Test – Acme Customer Portal</title>
+<style>
+:root { --accent: #1F4E79; }
+/* pentrep "classic" theme. --accent is set from branding.accent_color in report.html.j2. */
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 15px; }
+body {
+  margin: 0;
+  color: #1A1A1A;
+  background: #FFFFFF;
+  font-family: "Source Sans 3", "Segoe UI", Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+}
+main, footer { max-width: 60rem; margin: 0 auto; padding: 0 1.5rem; }
+h1, h2, h3, h4 { color: var(--accent); line-height: 1.25; }
+h2 { border-bottom: 2px solid var(--accent); padding-bottom: 0.2rem; margin-top: 2.5rem; }
+h3 { margin-top: 2rem; }
+h4 { margin: 1.25rem 0 0.4rem; color: #333333; }
+a { color: var(--accent); }
+code, pre { font-family: "Source Code Pro", Menlo, Consolas, monospace; font-size: 0.9em; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* WeasyPrint only wraps span-fragmented (highlighted) code with break-all. */
+.highlight pre, pre.plain { word-break: break-all; }
+
+/* Cover */
+.cover { padding: 4rem 1.5rem 3rem; border-top: 1.25rem solid var(--accent); text-align: center; }
+.cover h1 { font-size: 2.2rem; margin: 1.5rem auto; max-width: 48rem; }
+.cover .logo { max-height: 5rem; max-width: 16rem; }
+.cover .company { font-weight: 600; color: #333333; }
+.cover dl { display: inline-grid; grid-template-columns: auto auto; gap: 0.25rem 1rem; text-align: left; }
+.cover dt { font-weight: 600; }
+.cover dd { margin: 0; }
+.classification { letter-spacing: 0.1em; font-weight: 700; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; }
+th, td { border: 1px solid #C8C8C8; padding: 0.35rem 0.6rem; text-align: left; vertical-align: top; }
+thead th { background: var(--accent); color: #FFFFFF; }
+tbody th { background: #F3F4F6; }
+.stats { width: auto; min-width: 20rem; }
+.stats td { text-align: right; }
+
+/* Severity badges (FR-44); text colours meet WCAG AA (4.5:1) */
+.badge { display: inline-block; padding: 0.05rem 0.55rem; border-radius: 0.3rem; font-weight: 700; font-size: 0.85em; }
+.badge-critical { background: #7B1FA2; color: #FFFFFF; }
+.badge-high { background: #C62828; color: #FFFFFF; }
+.badge-medium { background: #E65100; color: #000000; }
+.badge-low { background: #2E7D32; color: #FFFFFF; }
+.badge-informational { background: #455A64; color: #FFFFFF; }
+.badge-none { background: #455A64; color: #FFFFFF; }
+
+/* Findings */
+.finding { border-top: 1px solid #DDDDDD; }
+.finding-meta { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 1rem; margin: 0.5rem 0 1rem; }
+.finding-meta dt { font-weight: 600; }
+.finding-meta dd { margin: 0; overflow-wrap: anywhere; }
+.md-heading { margin-bottom: 0.25rem; }
+figure.evidence { margin: 1rem 0; }
+figure.evidence figcaption { font-weight: 600; margin-bottom: 0.3rem; }
+figure.evidence img { max-width: 100%; border: 1px solid #C8C8C8; }
+.highlight pre, pre.plain { padding: 0.75rem; border: 1px solid #DDDDDD; border-radius: 0.3rem; background: #F8F8F8; margin: 0; }
+
+/* Unredacted draft banner (FR-36) */
+.draft-banner { margin: 0.5rem 0; padding: 0.4rem 0.75rem; background: #B71C1C; color: #FFFFFF; font-weight: 700; text-align: center; letter-spacing: 0.05em; }
+
+footer { margin-top: 3rem; padding-top: 1rem; padding-bottom: 2rem; border-top: 1px solid #DDDDDD; color: #555555; font-size: 0.85em; }
+
+@media print {
+  html { font-size: 10.5pt; }
+  a { color: inherit; text-decoration: none; }
+  main, footer { max-width: none; padding: 0; }
+  .cover { page-break-after: always; padding-top: 6rem; }
+  .finding { page-break-before: always; border-top: none; }
+  pre, figure, table, .finding-meta { page-break-inside: avoid; }
+  h2, h3, h4 { page-break-after: avoid; }
+  /* Running header text (FR-46, FR-36) and TOC page numbers (WeasyPrint paged media). */
+  .cover dd.classification { string-set: classification content(text); }
+  .cover .draft-banner { string-set: draft content(text); }
+  .toc a::after { content: leader(".") " " target-counter(attr(href), page); }
+  h4, h5, h6 { bookmark-level: none; }
+  footer { display: none; }
+}
+
+@page {
+  margin: 22mm 18mm 20mm;
+  /* Margin boxes do not inherit from <body>, so set the font here too (FR-46). */
+  font-family: "Source Sans 3", "Segoe UI", Helvetica, Arial, sans-serif;
+  @top-center {
+    content: string(classification) "   " string(draft);
+    font-size: 8.5pt; font-weight: 700; letter-spacing: 0.08em; color: #555555;
+  }
+  @bottom-right {
+    content: "Page " counter(page) " of " counter(pages);
+    font-size: 8.5pt; color: #555555;
+  }
+}
+@page :first {
+  @top-center { content: none; }
+  @bottom-right { content: none; }
+}
+
+</style>
+</head>
+<body>
+<header class="cover" id="cover">
+<img class="logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAABQCAIAAACoK28rAAAAsElEQVR42u3SAQ0AAAjDsDvBEX5wj4+nSRUsy+xBjUiAocHQYGgwNIYGQ4OhwdBgaAwNhgZDg6HB0BgaDA2GBkODoTE0GBoMDYYGQ2NoMDQYGgwNhsbQYGgwNBgaDI2hwdBgaDA0hgZDg6HB0GBoDA2GBkODocHQGBoMDYYGQ4OhMTQYGgwNhgZDY2gwNBgaDA2GxtBgaDA0GBoMjaHB0GBoMDQYGkODocHQYGgMDR0etkVl7iCUxEwAAAAASUVORK5CYII=" alt="Example Security Labs logo">
+<p class="company">Example Security Labs</p>
+
+<h1>Web Application Penetration Test – Acme Customer Portal</h1>
+<dl>
+<dt>Client</dt><dd>Acme Corp</dd>
+<dt>Report date</dt><dd>2026-11-20</dd>
+<dt>Version</dt><dd>Version 1.0</dd>
+<dt>Classification</dt><dd class="classification">CONFIDENTIAL</dd>
+</dl>
+</header>
+<main>
+<section id="document-control">
+<h2>Document control</h2>
+
+<table>
+<tbody>
+<tr><th scope="row">Report version</th><td>1.0</td></tr>
+<tr><th scope="row">Report date</th><td>2026-11-20</td></tr>
+<tr><th scope="row">Classification</th><td>CONFIDENTIAL</td></tr>
+<tr><th scope="row">Client</th><td>Acme Corp (Jane Doe, CISO)</td></tr>
+<tr><th scope="row">Testing period</th><td>2026-11-02 to 2026-11-13</td></tr>
+</tbody>
+</table>
+<table>
+<thead><tr><th scope="col">Tester</th><th scope="col">Role</th><th scope="col">Email</th></tr></thead>
+<tbody>
+<tr><td>Alex Tester</td><td>Lead Penetration Tester</td><td>alex@example-security.test</td></tr>
+</tbody>
+</table>
+</section>
+<section id="table-of-contents">
+<h2>Table of contents</h2>
+
+<ol class="toc">
+<li><a href="#executive-summary">Executive summary</a></li>
+<li><a href="#scope-and-methodology">Scope and methodology</a></li>
+<li><a href="#findings-summary">Findings summary</a></li>
+<li><a href="#detailed-findings">Detailed findings</a>
+<ol>
+<li><a href="#finding-pt-001">PT-001: SQL Injection in Login Endpoint</a></li>
+<li><a href="#finding-pt-002">PT-002: Reflected Cross-Site Scripting in Search</a></li>
+</ol>
+</li>
+<li><a href="#appendix-a">Appendix A: CVSS 3.1 severity scale</a></li>
+<li><a href="#appendix-b">Appendix B: Redaction</a></li>
+</ol>
+</section>
+<section id="executive-summary">
+<h2>Executive summary</h2>
+
+<p>The portal's authentication layer is vulnerable to SQL injection, which
+allows an unauthenticated attacker to take over any account. Immediate
+remediation of PT-001 is recommended.</p>
+
+<table class="stats">
+<thead><tr><th scope="col">Severity</th><th scope="col">Findings</th></tr></thead>
+<tbody>
+<tr><th scope="row">Critical</th><td>1</td></tr>
+<tr><th scope="row">High</th><td>0</td></tr>
+<tr><th scope="row">Medium</th><td>1</td></tr>
+<tr><th scope="row">Low</th><td>0</td></tr>
+<tr><th scope="row">Informational/None</th><td>0</td></tr>
+<tr><th scope="row">Total</th><td>2</td></tr>
+</tbody>
+</table>
+<p>Overall risk: <span class="badge badge-critical">Critical</span></p>
+</section>
+<section id="scope-and-methodology">
+<h2>Scope and methodology</h2>
+
+<h3>In scope</h3>
+<table>
+<thead><tr><th scope="col">Asset</th><th scope="col">Type</th><th scope="col">Notes</th></tr></thead>
+<tbody>
+<tr><td>https://portal.acme.example</td><td>url</td><td></td></tr>
+<tr><td>203.0.113.10</td><td>ip</td><td>Production API host</td></tr>
+</tbody>
+</table>
+<h3>Out of scope</h3>
+<table>
+<thead><tr><th scope="col">Asset</th><th scope="col">Type</th><th scope="col">Notes</th></tr></thead>
+<tbody>
+<tr><td>https://status.acme.example</td><td>url</td><td>Hosted by a third party</td></tr>
+</tbody>
+</table>
+<h3>Methodology</h3>
+<p>Testing followed the <strong>OWASP Web Security Testing Guide v4.2</strong> as a
+grey-box assessment with two standard-user accounts supplied by Acme.</p>
+
+</section>
+<section id="findings-summary">
+<h2>Findings summary</h2>
+
+<table>
+<thead><tr><th scope="col">ID</th><th scope="col">Title</th><th scope="col">Severity</th><th scope="col">Score</th><th scope="col">Status</th></tr></thead>
+<tbody>
+<tr><td><a href="#finding-pt-001">PT-001</a></td><td>SQL Injection in Login Endpoint</td><td><span class="badge badge-critical">Critical</span></td><td>9.8</td><td>Open</td></tr>
+<tr><td><a href="#finding-pt-002">PT-002</a></td><td>Reflected Cross-Site Scripting in Search</td><td><span class="badge badge-medium">Medium</span></td><td>6.1</td><td>Open</td></tr>
+</tbody>
+</table>
+</section>
+<section id="detailed-findings">
+<h2>Detailed findings</h2>
+
+<article class="finding" id="finding-pt-001">
+<h3>PT-001: SQL Injection in Login Endpoint</h3>
+<dl class="finding-meta">
+<dt>Severity</dt><dd><span class="badge badge-critical">Critical</span></dd>
+<dt>CVSS 3.1 score</dt><dd>9.8 (Impact 5.9, Exploitability 3.9)</dd>
+<dt>Vector</dt><dd><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H</code></dd>
+<dt>Status</dt><dd>Open</dd>
+<dt>CWE</dt><dd><a href="https://cwe.mitre.org/data/definitions/89.html">CWE-89</a></dd>
+</dl>
+<h4>Affected assets</h4>
+<ul>
+<li>https://portal.acme.example/api/v1/login</li>
+</ul>
+<h4>Description</h4>
+<p>The <code>username</code> field of the JSON login request is concatenated into a
+SQL query without parameterisation.</p>
+
+<h4>Impact</h4>
+<p>An unauthenticated attacker can bypass authentication as any user,
+including administrators, and read or modify the entire database.</p>
+
+<h4>Steps to reproduce</h4>
+<ol>
+<li>Send the request shown in Evidence 1 to <code>/api/v1/login</code>.</li>
+<li>Observe that a valid session for the <code>admin</code> user is returned.</li>
+</ol>
+<h4>Evidence</h4>
+<figure class="evidence">
+<figcaption>Evidence 1: Boolean-based payload returns an admin session</figcaption>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #00F">POST</span> <span style="color: #00F; font-weight: bold">/api/v1/login</span> <span style="color: #008000; font-weight: bold">HTTP</span><span style="color: #666">/1.1</span>
+<span style="color: #687822">Host</span><span style="color: #666">:</span> portal.acme.example
+<span style="color: #687822">Content-Type</span><span style="color: #666">:</span> application/json
+
+{<span style="color: #008000; font-weight: bold">"username"</span>:<span style="color: #BA2121">"admin' OR '1'='1' -- "</span>,<span style="color: #008000; font-weight: bold">"password"</span>:<span style="color: #BA2121">"[REDACTED:SECRET]"</span>}
+
+<span style="color: #008000; font-weight: bold">HTTP</span><span style="color: #666">/1.1</span> <span style="color: #666">200</span> <span style="color: #CB3F38; font-weight: bold">OK</span>
+<span style="color: #687822">Set-Cookie</span><span style="color: #666">:</span> session=[REDACTED:COOKIE]; Path=/; HttpOnly; Secure
+<span style="color: #687822">Content-Type</span><span style="color: #666">:</span> application/json
+
+{<span style="color: #008000; font-weight: bold">"token"</span>:<span style="color: #BA2121">"[REDACTED:JWT]"</span>,<span style="color: #008000; font-weight: bold">"email"</span>:<span style="color: #BA2121">"[REDACTED:EMAIL]"</span>,<span style="color: #008000; font-weight: bold">"staff_id"</span>:<span style="color: #BA2121">"[REDACTED:ACME_EMPLOYEE_ID]"</span>}
+</pre></div>
+
+</figure>
+<figure class="evidence">
+<figcaption>Evidence 2: sqlmap enumerating database tables</figcaption>
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAoAAAAFoCAIAAABIUN0GAAAEfUlEQVR42u3VMQ0AAAzDsPIpf37VSOyyIeRJCgC8iwQAYMAAYMAAgAEDgAEDAAYMAAYMABgwABgwAGDAAGDAAGDAAIABA4ABAwAGDAAGDAAYMAAYMABgwABgwABgwACAAQOAAQMABgwABgwAGDAAGDAAYMAAYMAAYMAAgAEDgAEDAAYMAAYMABgwABgwAGDAAGDAAGDAAIABA4ABAwAGDAAGDAAYMAAYMABgwABgwABgwACAAQOAAQMABgwABgwAGDAAGDAAYMAAYMAAYMAAgAEDgAEDAAYMAAYMABgwABgwAGDAAGDAAGDAAIABA4ABAwAGDAAGDAAYMAAYMABgwABgwABgwACAAQOAAQMABgwABgwAGDAAGDAAYMAAYMAAYMAAgAEDgAEDAAYMAAYMABgwABgwAGDAAGDAAIABA4ABA4ABAwAGDAAGDAAYMAAYMABgwABgwACAAQOAAQOAAQMABgwABgwAGDAAGDAAYMAAYMAAgAEDgAEDgAEDAAYMAAYMABgwABgwAGDAAGDAAIABA4ABA4ABAwAGDAAGDAAYMAAYMABgwABgwACAAQOAAQOAAQMABgwABgwAGDAAGDAAYMAAYMAAgAEDgAEDgAEDAAYMAAYMABgwABgwAGDAAGDAAIABA4ABA4ABAwAGDAAGDAAYMAAYMABgwABgwACAAQOAAQOAAQMABgwABgwAGDAAGDAAYMAAYMAAgAEDgAEDgAEDAAYMAAYMABgwABgwAGDAAGDAAIABA4ABAwAGDAAGDAAGDAAYMAAYMABgwABgwACAAQOAAQMABgwABgwABgwAGDAAGDAAYMAAYMAAgAEDgAEDAAYMAAYMAAYMABgwABgwAGDAAGDAAIABA4ABAwAGDAAGDAAGDAAYMAAYMABgwABgwACAAQOAAQMABgwABgwABgwAGDAAGDAAYMAAYMAAgAEDgAEDAAYMAAYMAAYMABgwABgwAGDAAGDAAIABA4ABAwAGDAAGDAAGDAAYMAAYMABgwABgwACAAQOAAQMABgwABgwABgwAGDAAGDAAYMAAYMAAgAEDgAEDAAYMAAYMAAYMABgwABgwAGDAAGDAAIABA4ABAwAGDAAGDAAGLAEAGDAAGDAAYMAAYMAAgAEDgAEDAAYMAAYMABgwABgwABgwAGDAAGDAAIABA4ABAwAGDAAGDAAYMAAYMAAYMABgwABgwACAAQOAAQMABgwABgwAGDAAGDAAGDAAYMAAYMAAgAEDgAEDAAYMAAYMABgwABgwABgwAGDAAGDAAIABA4ABAwAGDAAGDAAYMAAYMAAYMABgwABgwACAAQOAAQMABgwABgwAGDAAGDAAGDAAYMAAYMAAgAEDgAEDAAYMAAYMABgwABgwABgwAGDAAGDAAIABA4ABAwAGDAAGDAAYMAAYMAAYMABgwABgwACAAQOAAQMABgwABgwAGDAAGDAAGDAAYMAAYMAAgAEDgAEDAAYMAAYMABgwABgwAGDAAGDAAGDAAIABA4ABAwAGDAAGDAAYMAAYMABwBhAonoytTK9tAAAAAElFTkSuQmCC" alt="sqlmap enumerating database tables">
+</figure>
+<h4>Remediation</h4>
+<p>Use parameterised queries (prepared statements) for all database access
+and add a WAF rule as defence in depth until the fix is deployed.</p>
+
+<h4>References</h4>
+<ul>
+<li><a href="https://owasp.org/www-community/attacks/SQL_Injection">https://owasp.org/www-community/attacks/SQL_Injection</a></li>
+<li><a href="https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html">https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html</a></li>
+</ul>
+</article>
+<article class="finding" id="finding-pt-002">
+<h3>PT-002: Reflected Cross-Site Scripting in Search</h3>
+<dl class="finding-meta">
+<dt>Severity</dt><dd><span class="badge badge-medium">Medium</span></dd>
+<dt>CVSS 3.1 score</dt><dd>6.1 (Impact 2.7, Exploitability 2.8)</dd>
+<dt>Vector</dt><dd><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N</code></dd>
+<dt>Status</dt><dd>Open</dd>
+<dt>CWE</dt><dd><a href="https://cwe.mitre.org/data/definitions/79.html">CWE-79</a></dd>
+</dl>
+<h4>Affected assets</h4>
+<ul>
+<li>https://portal.acme.example/search?q=</li>
+</ul>
+<h4>Description</h4>
+<p>The <code>q</code> parameter is reflected into the results page without output
+encoding, allowing arbitrary JavaScript to run in the victim's browser.</p>
+
+<h4>Impact</h4>
+<p>An attacker who tricks a logged-in user into opening a crafted link can
+perform actions as that user and read data shown in the page.</p>
+
+<h4>Steps to reproduce</h4>
+<ol>
+<li>Log in as any user.</li>
+<li>Open <code>https://portal.acme.example/search?q=&lt;svg/onload=alert(document.domain)&gt;</code>.</li>
+<li>Observe the alert box showing <code>portal.acme.example</code>.</li>
+</ol>
+<h4>Evidence</h4>
+<figure class="evidence">
+<figcaption>Evidence 1: Reflected payload in the HTML response (internal debug header included)</figcaption>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>X-Backend-Host: [REDACTED:PRIVATE_IP]
+&lt;div class="results"&gt;No results for &lt;svg/onload=alert(document.domain)&gt;&lt;/div&gt;
+</pre></div>
+
+</figure>
+<h4>Remediation</h4>
+<p>Apply context-aware output encoding to all reflected input and deploy a
+Content-Security-Policy that disallows inline scripts.</p>
+
+<h4>References</h4>
+<ul>
+<li><a href="https://owasp.org/www-community/attacks/xss/">https://owasp.org/www-community/attacks/xss/</a></li>
+</ul>
+</article>
+</section>
+<section id="appendix-a">
+<h2>Appendix A: CVSS 3.1 severity scale</h2>
+
+<p>Scores are CVSS 3.1 base scores calculated from each finding's vector. Informational findings have no score.</p>
+<table>
+<thead><tr><th scope="col">Severity</th><th scope="col">Base score</th></tr></thead>
+<tbody>
+<tr><td><span class="badge badge-none">None</span></td><td>0.0</td></tr>
+<tr><td><span class="badge badge-low">Low</span></td><td>0.1 – 3.9</td></tr>
+<tr><td><span class="badge badge-medium">Medium</span></td><td>4.0 – 6.9</td></tr>
+<tr><td><span class="badge badge-high">High</span></td><td>7.0 – 8.9</td></tr>
+<tr><td><span class="badge badge-critical">Critical</span></td><td>9.0 – 10.0</td></tr>
+</tbody>
+</table>
+</section>
+<section id="appendix-b">
+<h2>Appendix B: Redaction</h2>
+
+<p>Secrets and personal data in evidence and reproduction steps were replaced with <code>[REDACTED:NAME]</code> tokens. Redaction is pattern-based and is a safety net, not a guarantee.</p>
+<table>
+<thead><tr><th scope="col">Pattern</th><th scope="col">Values redacted</th></tr></thead>
+<tbody>
+<tr><td>SECRET</td><td>1</td></tr>
+<tr><td>COOKIE</td><td>1</td></tr>
+<tr><td>JWT</td><td>1</td></tr>
+<tr><td>EMAIL</td><td>1</td></tr>
+<tr><td>ACME_EMPLOYEE_ID</td><td>1</td></tr>
+<tr><td>PRIVATE_IP</td><td>1</td></tr>
+</tbody>
+</table>
+<p>Note: 1 image evidence item was not scanned (image redaction is not supported in v0.1)</p>
+</section>
+</main>
+<footer>
+<p>CONFIDENTIAL · Web Application Penetration Test – Acme Customer Portal · Generated 2026-11-20T12:00:00Z by pentrep <PENTREP_VERSION></p>
+</footer>
+</body>
+</html>

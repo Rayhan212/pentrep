@@ -1,0 +1,22 @@
+{% from "partials/macros.html.j2" import draft_banner %}
+<section id="document-control">
+<h2>Document control</h2>
+{{ draft_banner(redaction) }}
+<table>
+<tbody>
+<tr><th scope="row">Report version</th><td>{{ engagement.report_version }}</td></tr>
+<tr><th scope="row">Report date</th><td>{{ engagement.report_date }}</td></tr>
+<tr><th scope="row">Classification</th><td>{{ engagement.classification }}</td></tr>
+<tr><th scope="row">Client</th><td>{{ engagement.client.name }}{% if engagement.client.contact %} ({{ engagement.client.contact }}){% endif %}</td></tr>
+<tr><th scope="row">Testing period</th><td>{{ engagement.start_date }} to {{ engagement.end_date }}</td></tr>
+</tbody>
+</table>
+<table>
+<thead><tr><th scope="col">Tester</th><th scope="col">Role</th><th scope="col">Email</th></tr></thead>
+<tbody>
+{% for tester in engagement.testers %}
+<tr><td>{{ tester.name }}</td><td>{{ tester.role or "" }}</td><td>{{ tester.email or "" }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</section>

@@ -44,7 +44,7 @@ jobs:
         python: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v7
-      # WeasyPrint system libraries, installed now so PDF tests (M6) need no CI changes.
+      # WeasyPrint system libraries for the pdf tests (required in CI, see PENTREP_REQUIRE_PDF).
       - name: Install Pango (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -63,3 +63,8 @@ jobs:
       - run: uv sync --locked
       - name: pytest (with coverage gate)
         run: uv run pytest --cov --cov-report=term-missing
+        env:
+          # A missing WeasyPrint library must fail CI, not silently skip the pdf tests (M6.7).
+          PENTREP_REQUIRE_PDF: "1"
+          # cffi does not search Homebrew's lib directory on Apple Silicon by default.
+          DYLD_FALLBACK_LIBRARY_PATH: ${{ runner.os == 'macOS' && '/opt/homebrew/lib' || '' }}

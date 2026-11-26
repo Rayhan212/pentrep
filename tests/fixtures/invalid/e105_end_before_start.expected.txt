@@ -1,0 +1,2 @@
+e105_end_before_start.yaml:10:13: error[E105] engagement.end_date: end_date 2026-11-01 is before start_date 2026-11-02
+✗ e105_end_before_start.yaml is invalid: 1 error, 0 warnings

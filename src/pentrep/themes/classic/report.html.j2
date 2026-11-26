@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="pentrep {{ pentrep_version }}">
+<title>{{ engagement.title }}</title>
+<style>
+:root { --accent: {{ branding.accent_color }}; }
+{{ css }}
+</style>
+</head>
+<body>
+{% from "partials/macros.html.j2" import draft_banner %}
+{% include "partials/cover.html.j2" %}
+<main>
+{% include "partials/document_control.html.j2" %}
+{% include "partials/toc.html.j2" %}
+{% include "partials/executive_summary.html.j2" %}
+{% include "partials/scope.html.j2" %}
+{% include "partials/summary_table.html.j2" %}
+<section id="detailed-findings">
+<h2>Detailed findings</h2>
+{{ draft_banner(redaction) }}
+{% for finding in findings %}
+{% include "partials/finding.html.j2" %}
+{% endfor %}
+</section>
+{% include "partials/appendix.html.j2" %}
+</main>
+<footer>
+<p>{{ engagement.classification }} · {{ engagement.title }} · Generated {{ generated_at }} by pentrep {{ pentrep_version }}</p>
+</footer>
+</body>
+</html>

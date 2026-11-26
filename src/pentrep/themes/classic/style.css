@@ -1,0 +1,97 @@
+/* pentrep "classic" theme. --accent is set from branding.accent_color in report.html.j2. */
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 15px; }
+body {
+  margin: 0;
+  color: #1A1A1A;
+  background: #FFFFFF;
+  font-family: "Source Sans 3", "Segoe UI", Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+}
+main, footer { max-width: 60rem; margin: 0 auto; padding: 0 1.5rem; }
+h1, h2, h3, h4 { color: var(--accent); line-height: 1.25; }
+h2 { border-bottom: 2px solid var(--accent); padding-bottom: 0.2rem; margin-top: 2.5rem; }
+h3 { margin-top: 2rem; }
+h4 { margin: 1.25rem 0 0.4rem; color: #333333; }
+a { color: var(--accent); }
+code, pre { font-family: "Source Code Pro", Menlo, Consolas, monospace; font-size: 0.9em; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* WeasyPrint only wraps span-fragmented (highlighted) code with break-all. */
+.highlight pre, pre.plain { word-break: break-all; }
+
+/* Cover */
+.cover { padding: 4rem 1.5rem 3rem; border-top: 1.25rem solid var(--accent); text-align: center; }
+.cover h1 { font-size: 2.2rem; margin: 1.5rem auto; max-width: 48rem; }
+.cover .logo { max-height: 5rem; max-width: 16rem; }
+.cover .company { font-weight: 600; color: #333333; }
+.cover dl { display: inline-grid; grid-template-columns: auto auto; gap: 0.25rem 1rem; text-align: left; }
+.cover dt { font-weight: 600; }
+.cover dd { margin: 0; }
+.classification { letter-spacing: 0.1em; font-weight: 700; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; }
+th, td { border: 1px solid #C8C8C8; padding: 0.35rem 0.6rem; text-align: left; vertical-align: top; }
+thead th { background: var(--accent); color: #FFFFFF; }
+tbody th { background: #F3F4F6; }
+.stats { width: auto; min-width: 20rem; }
+.stats td { text-align: right; }
+
+/* Severity badges (FR-44); text colours meet WCAG AA (4.5:1) */
+.badge { display: inline-block; padding: 0.05rem 0.55rem; border-radius: 0.3rem; font-weight: 700; font-size: 0.85em; }
+.badge-critical { background: #7B1FA2; color: #FFFFFF; }
+.badge-high { background: #C62828; color: #FFFFFF; }
+.badge-medium { background: #E65100; color: #000000; }
+.badge-low { background: #2E7D32; color: #FFFFFF; }
+.badge-informational { background: #455A64; color: #FFFFFF; }
+.badge-none { background: #455A64; color: #FFFFFF; }
+
+/* Findings */
+.finding { border-top: 1px solid #DDDDDD; }
+.finding-meta { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 1rem; margin: 0.5rem 0 1rem; }
+.finding-meta dt { font-weight: 600; }
+.finding-meta dd { margin: 0; overflow-wrap: anywhere; }
+.md-heading { margin-bottom: 0.25rem; }
+figure.evidence { margin: 1rem 0; }
+figure.evidence figcaption { font-weight: 600; margin-bottom: 0.3rem; }
+figure.evidence img { max-width: 100%; border: 1px solid #C8C8C8; }
+.highlight pre, pre.plain { padding: 0.75rem; border: 1px solid #DDDDDD; border-radius: 0.3rem; background: #F8F8F8; margin: 0; }
+
+/* Unredacted draft banner (FR-36) */
+.draft-banner { margin: 0.5rem 0; padding: 0.4rem 0.75rem; background: #B71C1C; color: #FFFFFF; font-weight: 700; text-align: center; letter-spacing: 0.05em; }
+
+footer { margin-top: 3rem; padding-top: 1rem; padding-bottom: 2rem; border-top: 1px solid #DDDDDD; color: #555555; font-size: 0.85em; }
+
+@media print {
+  html { font-size: 10.5pt; }
+  a { color: inherit; text-decoration: none; }
+  main, footer { max-width: none; padding: 0; }
+  .cover { page-break-after: always; padding-top: 6rem; }
+  .finding { page-break-before: always; border-top: none; }
+  pre, figure, table, .finding-meta { page-break-inside: avoid; }
+  h2, h3, h4 { page-break-after: avoid; }
+  /* Running header text (FR-46, FR-36) and TOC page numbers (WeasyPrint paged media). */
+  .cover dd.classification { string-set: classification content(text); }
+  .cover .draft-banner { string-set: draft content(text); }
+  .toc a::after { content: leader(".") " " target-counter(attr(href), page); }
+  h4, h5, h6 { bookmark-level: none; }
+  footer { display: none; }
+}
+
+@page {
+  margin: 22mm 18mm 20mm;
+  /* Margin boxes do not inherit from <body>, so set the font here too (FR-46). */
+  font-family: "Source Sans 3", "Segoe UI", Helvetica, Arial, sans-serif;
+  @top-center {
+    content: string(classification) "   " string(draft);
+    font-size: 8.5pt; font-weight: 700; letter-spacing: 0.08em; color: #555555;
+  }
+  @bottom-right {
+    content: "Page " counter(page) " of " counter(pages);
+    font-size: 8.5pt; color: #555555;
+  }
+}
+@page :first {
+  @top-center { content: none; }
+  @bottom-right { content: none; }
+}

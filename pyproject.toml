@@ -27,7 +27,13 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    "jinja2>=3.1.6,<4",
+    "markdown-it-py>=4,<5",
+    "pydantic>=2.12,<3",
+    "pygments>=2.19,<3",
+    "ruamel-yaml>=0.19.1,<0.20",
     "typer>=0.29.2,<1",
+    "weasyprint>=70,<71",
 ]
 
 [project.scripts]
@@ -39,11 +45,16 @@ Issues = "https://github.com/Rayhan212/pentrep/issues"
 
 [dependency-groups]
 dev = [
+    "hypothesis>=6.140,<7",
+    "jsonschema>=4.25,<5",
     "mypy>=2.4.1",
     "pre-commit>=4.7.0",
+    "pypdf>=6,<7",
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
+    "pytest-socket>=0.7,<1",
     "ruff>=0.17.6",
+    "types-pygments>=2.19,<3",
 ]
 
 [tool.hatch.version]
@@ -59,6 +70,8 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "SIM", "RUF"]
+# FR-35 prescribes the multiplication sign in redaction summaries ("SECRET×1").
+allowed-confusables = ["×"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S603"]  # assert and subprocess are expected in tests
