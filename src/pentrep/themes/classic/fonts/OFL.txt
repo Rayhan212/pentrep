@@ -1,4 +1,15 @@
-Copyright 2010-2024 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.
+Fonts bundled with pentrep (src/pentrep/themes/classic/fonts/):
+
+- Source Sans 3 (SourceSans3-Regular.ttf, SourceSans3-It.ttf, SourceSans3-Bold.ttf), from the
+  npm package source-sans 3.52.0 (https://github.com/adobe-fonts/source-sans)
+- Source Code Pro (SourceCodePro-Regular.ttf), from the npm package source-code-pro 2.42.0
+  (https://github.com/adobe-fonts/source-code-pro)
+
+Copyright notices, as published with each font:
+
+Source Sans 3: Copyright 2010-2024 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.
+
+Source Code Pro: © 2023 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 

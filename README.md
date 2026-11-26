@@ -58,4 +58,9 @@ uv run pytest
 
 ## License
 
-[MIT](LICENSE)
+pentrep is released under the [MIT License](LICENSE).
+
+The bundled fonts, Source Sans 3 and Source Code Pro by Adobe, are licensed under the SIL Open Font License,
+Version 1.1. The licence text and both copyright notices are in
+[`src/pentrep/themes/classic/fonts/OFL.txt`](src/pentrep/themes/classic/fonts/OFL.txt). It ships inside the wheel
+next to the font files.

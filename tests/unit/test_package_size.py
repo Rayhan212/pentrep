@@ -26,10 +26,18 @@ def test_fonts_are_bundled_as_truetype(name: str) -> None:
     assert data[:4] in (b"\x00\x01\x00\x00", b"true", b"OTTO")
 
 
-def test_ofl_licences_are_bundled() -> None:
-    for name in ("OFL-SourceSans3.txt", "OFL-SourceCodePro.txt"):
-        text = (FONTS / name).read_text("utf-8")
-        assert "SIL OPEN FONT LICENSE VERSION 1.1" in text.upper()
+def test_ofl_licence_is_bundled_with_both_copyright_notices() -> None:
+    text = (FONTS / "OFL.txt").read_text("utf-8")
+    assert "SIL OPEN FONT LICENSE Version 1.1" in text
+    assert "Source Sans 3: Copyright 2010-2024 Adobe" in text
+    assert "Source Code Pro: \u00a9 2023 Adobe" in text
+    assert sorted(p.name for p in FONTS.glob("*.txt")) == ["OFL.txt"]
+
+
+def test_readme_mentions_the_font_licence() -> None:
+    readme = (ROOT / "README.md").read_text("utf-8")
+    assert "src/pentrep/themes/classic/fonts/OFL.txt" in readme
+    assert "SIL Open Font License" in readme
 
 
 def test_fonts_css_declares_every_bundled_font() -> None:
@@ -55,5 +63,5 @@ def test_wheel_is_at_most_2_mb(tmp_path: Path) -> None:
     [wheel] = tmp_path.glob("*.whl")
     assert wheel.stat().st_size <= MAX_WHEEL_BYTES, wheel.stat().st_size
     names = zipfile.ZipFile(wheel).namelist()
-    for name in FONT_FILES:
+    for name in (*FONT_FILES, "OFL.txt"):
         assert f"pentrep/themes/classic/fonts/{name}" in names

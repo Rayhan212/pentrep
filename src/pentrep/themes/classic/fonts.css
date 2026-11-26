@@ -1,4 +1,4 @@
-/* Bundled OFL fonts (licences in fonts/). Used only for PDF output, so that PDFs look the same on
+/* Bundled OFL fonts (licence: fonts/OFL.txt). Used only for PDF output, so that PDFs look the same on
    every machine (FR-46). The HTML report does not load them: it stays self-contained (FR-45) and uses
    the font stacks in style.css. */
 @font-face { font-family: "Source Sans 3"; font-weight: 400; font-style: normal; src: url("fonts/SourceSans3-Regular.ttf"); }
