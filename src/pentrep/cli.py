@@ -185,6 +185,13 @@ class BuildFormat(StrEnum):
     ALL = "all"
 
 
+class Paper(StrEnum):
+    """PDF page sizes (``--paper``)."""
+
+    A4 = "a4"
+    LETTER = "letter"
+
+
 NAME_RE: Final = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
 DEFAULT_OUTPUT_DIR: Final = Path("report")
 DRAFT_WARNING: Final = (
@@ -233,6 +240,7 @@ def build(
             help="Templates that override the theme.",
         ),
     ] = None,
+    paper: Annotated[Paper, typer.Option("--paper", help="PDF page size.")] = Paper.A4,
     no_redact: Annotated[
         bool, typer.Option("--no-redact", help="Disable redaction (marks an UNREDACTED DRAFT).")
     ] = False,
@@ -244,6 +252,7 @@ def build(
 
     from pentrep.render.html import render_html
     from pentrep.render.md import render_md
+    from pentrep.render.pdf import RenderError, render_pdf
 
     wanted = set(formats or [BuildFormat.ALL])
     if BuildFormat.ALL in wanted:
@@ -268,9 +277,11 @@ def build(
     base_dir = file.parent
     outputs: list[tuple[Path, bytes]] = []
     copies: list[tuple[Path, Path]] = []
+    html = ""
     try:
-        if BuildFormat.HTML in wanted:
+        if wanted & {BuildFormat.HTML, BuildFormat.PDF}:
             html = render_html(report, summary, base_dir, template_dir)
+        if BuildFormat.HTML in wanted:
             outputs.append((output_dir / f"{name}.html", html.encode("utf-8")))
         if BuildFormat.MD in wanted:
             markdown = render_md(report, summary, base_dir, template_dir)
@@ -278,6 +289,31 @@ def build(
             copies.extend((source, output_dir / relative) for source, relative in markdown.assets)
     except jinja2.TemplateError as exc:
         raise _fail(f"error: template error: {exc}", ExitCode.RENDER_ERROR) from None
+    written = _write_outputs(outputs, copies, output_dir)
+    pdf_error: RenderError | None = None
+    if BuildFormat.PDF in wanted:
+        try:
+            pdf_bytes = render_pdf(html, paper=paper.value)
+        except RenderError as exc:
+            pdf_error = exc
+        else:
+            written += _write_outputs([(output_dir / f"{name}.pdf", pdf_bytes)], [], output_dir)
+    if not quiet:
+        for path in written:
+            typer.echo(f"Wrote {path.as_posix()} ({_size(path.stat().st_size)})")
+        for line in format_summary(summary):
+            typer.echo(line)
+    if pdf_error is not None:
+        written_note = " (the other requested formats were written)" if written else ""
+        raise _fail(
+            f"error: {pdf_error}{written_note}\n  hint: {pdf_error.hint}", ExitCode.RENDER_ERROR
+        )
+
+
+def _write_outputs(
+    outputs: list[tuple[Path, bytes]], copies: list[tuple[Path, Path]], output_dir: Path
+) -> list[Path]:
+    """Write files and copy assets; an OSError becomes exit code 3."""
     written: list[Path] = []
     try:
         for path, data in outputs:
@@ -290,16 +326,7 @@ def build(
             written.append(target)
     except OSError as exc:
         raise _fail(f"error: cannot write to {output_dir}: {exc}", ExitCode.RENDER_ERROR) from None
-    if not quiet:
-        for path in written:
-            typer.echo(f"Wrote {path.as_posix()} ({_size(path.stat().st_size)})")
-        for line in format_summary(summary):
-            typer.echo(line)
-    if BuildFormat.PDF in wanted:
-        raise _fail(
-            "error: PDF output is not implemented yet; the other requested formats were written",
-            ExitCode.RENDER_ERROR,
-        )
+    return written
 
 
 def run(cli_app: typer.Typer, argv: Sequence[str]) -> int:

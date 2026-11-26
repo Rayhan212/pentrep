@@ -33,6 +33,7 @@ dependencies = [
     "pygments>=2.19,<3",
     "ruamel-yaml>=0.19.1,<0.20",
     "typer>=0.29.2,<1",
+    "weasyprint>=70,<71",
 ]
 
 [project.scripts]
@@ -48,6 +49,7 @@ dev = [
     "jsonschema>=4.25,<5",
     "mypy>=2.4.1",
     "pre-commit>=4.7.0",
+    "pypdf>=6,<7",
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
     "pytest-socket>=0.7,<1",

@@ -30,3 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Markdown report with copied image assets, both from the `classic` theme. Output is deterministic and covered
   by golden files.
 - Docs: `docs/templates.md` (template context, filters and partials for `--template-dir`).
+- PDF output (`-f pdf`, part of the default `-f all`) with WeasyPrint: A4 or Letter (`--paper`), a
+  classification header, `Page X of Y` footers, TOC page numbers, bookmarks and a new page per finding. It embeds
+  only the bundled OFL fonts (Source Sans 3, Source Code Pro) and loads no external resources. If WeasyPrint's
+  libraries are missing, the other formats are still written and the CLI exits 3 with an install hint.

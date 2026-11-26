@@ -297,18 +297,46 @@ Runnable at the end: `pentrep build examples/findings.yaml -f html -f md` produc
 ## M6 — PDF export
 Runnable at the end: `pentrep build examples/findings.yaml` (default `-f all`) produces HTML, MD and PDF.
 
-- [ ] M6.1 Decide the font (Q-06), bundle the OFL font and its licence, and add a wheel-size check script (≤ 2 MB, NFR-12)
+- [x] M6.1 Decide the font (Q-06), bundle the OFL font and its licence, and add a wheel-size check script (≤ 2 MB, NFR-12)
   files: `src/pentrep/themes/classic/fonts/**`, `src/pentrep/themes/classic/style.css`, `tests/unit/test_package_size.py`
-- [ ] M6.2 TDD: PDF wrapper with lazy WeasyPrint import and a dependency check that raises `RenderError` with OS-specific hints (apt, brew, Docker); test the missing-library case with a simulated import failure. Add the `weasyprint` dep
+  > note: Q-06 decided: Source Sans 3 Regular/Italic/Bold plus Source Code Pro Regular (TrueType, OFL 1.1),
+  > taken from Adobe's official npm packages `source-sans@3.52.0` and `source-code-pro@2.42.0`; licences are in
+  > `fonts/OFL-*.txt`. The `@font-face` rules are in a separate `fonts.css` that only the PDF renderer loads (a font
+  > `url()` in the inlined `style.css` would break FR-45). The wheel is 704 KB; the size check is a test that builds
+  > the wheel, not a separate script.
+- [x] M6.2 TDD: PDF wrapper with lazy WeasyPrint import and a dependency check that raises `RenderError` with OS-specific hints (apt, brew, Docker); test the missing-library case with a simulated import failure. Add the `weasyprint` dep
   files: `src/pentrep/render/pdf.py`, `tests/render/test_pdf.py`, `pyproject.toml`, `uv.lock`
-- [ ] M6.3 Print CSS: `@page` A4/Letter, classification header, `Page X of Y` footer, no header on the cover, page break before each finding, TOC page numbers via `target-counter`, bookmarks for h1/h2
+  > note: WeasyPrint 70 (`weasyprint>=70,<71`) is imported with `importlib` only inside `render_pdf`; a missing
+  > package or system library becomes a `RenderError` that names the library and gives an apt/brew hint plus the
+  > Docker alternative. A `URLFetcher` subclass allows only `data:` URIs and files in the theme directory; anything
+  > else stops the render (no network, NFR-09). A pypdf-based test found that `@font-face` was being ignored (the
+  > PDF used system fonts) until one `FontConfiguration` is shared by `CSS()` and `write_pdf()`. `pdf` tests skip
+  > with a reason when the libraries are missing. `pypdf` was added here (planned for M6.5) to inspect fonts.
+- [x] M6.3 Print CSS: `@page` A4/Letter, classification header, `Page X of Y` footer, no header on the cover, page break before each finding, TOC page numbers via `target-counter`, bookmarks for h1/h2
   files: `src/pentrep/themes/classic/style.css`, `src/pentrep/themes/classic/partials/*`
-- [ ] M6.4 TDD: `build -f pdf` / `-f all` with `--paper`; on partial success, HTML and MD are written, then exit 3 with a hint and no traceback
+  > note: the page size is set by the PDF renderer (`--paper`); `style.css` adds the running header
+  > (classification, plus the FR-36 banner through `string-set` when unredacted), the `Page X of Y` footer, no
+  > header/footer on the cover, TOC page numbers with `leader()` + `target-counter()`, and bookmarks for h1–h3 (h3 =
+  > findings; h4+ are off). The font test found that page margin boxes fell back to DejaVu Serif, because they do not
+  > inherit the body font, so `@page` sets it too. The golden HTML was regenerated; the reviewed diff is CSS only.
+- [x] M6.4 TDD: `build -f pdf` / `-f all` with `--paper`; on partial success, HTML and MD are written, then exit 3 with a hint and no traceback
   files: `src/pentrep/cli.py`, `tests/cli/test_build.py`
-- [ ] M6.5 PDF structural tests (marker `pdf`) with pypdf: page size, finding titles in the text, one finding per page, footers, bookmarks. Add the `pypdf` dev dep
+  > note: the PDF is rendered last, from the same HTML (including any `--template-dir` overrides), so HTML
+  > and MD are already on disk if PDF fails; then the error, an `hint:` line and exit 3 follow, with no traceback.
+  > `--paper a4|letter` (default a4) is validated by Typer (exit 2 otherwise). A missing system library is
+  > simulated in the test.
+- [x] M6.5 PDF structural tests (marker `pdf`) with pypdf: page size, finding titles in the text, one finding per page, footers, bookmarks. Add the `pypdf` dev dep
   files: `tests/render/test_pdf.py`, `pyproject.toml`, `uv.lock`
-- [ ] M6.6 Content-parity test (same ids, titles, scores and severities in HTML, MD and PDF) and the PDF leak test on `leaky.yaml`
+  > note: the structure was built in M6.3, so these tests passed on the first run; a mutation check
+  > (removing the page break before `.finding`) makes the new-page test fail. Besides the planned checks there are
+  > tests for the classification header, the TOC page numbers and the FR-36 banner on every page header. `pypdf`
+  > (`>=6,<7`) was already added in M6.2.
+- [x] M6.6 Content-parity test (same ids, titles, scores and severities in HTML, MD and PDF) and the PDF leak test on `leaky.yaml`
   files: `tests/render/test_parity.py`, `tests/security/test_leaks.py`
+  > note: parity compares (id, title, severity, score) per finding, parsed from the HTML finding header,
+  > the Markdown finding header and the PDF text, for `full.yaml` and `minimal.yaml` built with `-f all`. The PDF leak
+  > test checks the extracted text (after confirming that extraction sees `[REDACTED:` tokens), the raw PDF bytes, and
+  > stdout/stderr of a `--debug` build.
 - [ ] M6.7 CI: set `PENTREP_REQUIRE_PDF=1` so a skipped `pdf` test fails in CI; check that PDF tests run on ubuntu and macOS
   files: `tests/conftest.py`, `.github/workflows/ci.yml`
 - [ ] M6.8 verify: `uv run pytest -m pdf && uv run pentrep build examples/findings.yaml -o tmp/m6 && uv run pentrep build examples/findings.yaml -f pdf --paper letter -o tmp/m6-letter` (both exit 0, `tmp/m6/pentest-report.pdf` opens, and CI shows 0 skipped `pdf` tests)

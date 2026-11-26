@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import Callable, Iterable
 from pathlib import Path
@@ -98,3 +99,50 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 def update_golden(request: pytest.FixtureRequest) -> bool:
     """True when pytest runs with ``--update-golden``."""
     return bool(request.config.getoption("--update-golden"))
+
+
+# --- PDF tests (M6) ------------------------------------------------------------------------------
+
+
+def _weasyprint_available() -> bool:
+    try:
+        import weasyprint  # noqa: F401
+    except (ImportError, OSError):
+        return False
+    return True
+
+
+def pdf_policy(available: bool, required: bool) -> str:
+    """What to do with ``pdf`` tests: ``run``, ``skip`` (visible reason) or ``fail`` (M6.7).
+
+    CI sets ``PENTREP_REQUIRE_PDF=1`` so that missing libraries fail the run instead of silently
+    skipping the PDF tests.
+    """
+    if available:
+        return "run"
+    return "fail" if required else "skip"
+
+
+@pytest.fixture
+def pdf_policy_function() -> Callable[[bool, bool], str]:
+    """:func:`pdf_policy` as a fixture (test modules don't import conftest)."""
+    return pdf_policy
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Skip ``pdf`` tests with a reason when WeasyPrint's libraries are missing, or fail in CI."""
+    if not any("pdf" in item.keywords for item in items):
+        return
+    required = os.environ.get("PENTREP_REQUIRE_PDF") == "1"
+    policy = pdf_policy(_weasyprint_available(), required)
+    if policy == "fail":
+        pytest.exit(
+            "PENTREP_REQUIRE_PDF=1 but WeasyPrint's system libraries (Pango/HarfBuzz) cannot be "
+            "loaded, so the pdf tests cannot run",
+            returncode=1,
+        )
+    if policy == "skip":
+        reason = "WeasyPrint system libraries (Pango/HarfBuzz) are not installed"
+        for item in items:
+            if "pdf" in item.keywords:
+                item.add_marker(pytest.mark.skip(reason=reason))

@@ -7,9 +7,11 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+from pypdf import PdfReader
 from typer.testing import CliRunner
 
 from pentrep.cli import app
+from pentrep.render import pdf as pdf_module
 
 FIXTURES = Path(__file__).parent.parent / "fixtures"
 
@@ -171,19 +173,58 @@ def test_unwritable_output_exits_3(runner: CliRunner, project: Path) -> None:
     assert "cannot write" in result.stderr  # type: ignore[attr-defined]
 
 
+@pytest.mark.pdf
 @pytest.mark.parametrize("args", [[], ["-f", "all"], ["-f", "pdf", "-f", "html", "-f", "md"]])
-def test_pdf_is_not_available_yet_but_other_formats_are_written(
-    runner: CliRunner, project: Path, args: list[str]
-) -> None:
+def test_all_formats(runner: CliRunner, project: Path, args: list[str]) -> None:
     result = _build(runner, *args)
+    assert result.exit_code == 0, result.output  # type: ignore[attr-defined]
+    for ext in ("html", "md", "pdf"):
+        assert (project / "report" / f"pentest-report.{ext}").is_file(), ext
+    assert (project / "report" / "pentest-report.pdf").read_bytes().startswith(b"%PDF-")
+    assert "Wrote report/pentest-report.pdf (" in result.stdout  # type: ignore[attr-defined]
+
+
+@pytest.mark.pdf
+@pytest.mark.parametrize(("paper", "size"), [([], (595, 842)), (["--paper", "a4"], (595, 842)),
+                                             (["--paper", "letter"], (612, 792))])  # fmt: skip
+def test_paper_size(
+    runner: CliRunner, project: Path, paper: list[str], size: tuple[int, int]
+) -> None:
+    assert _build(runner, "-f", "pdf", *paper).exit_code == 0  # type: ignore[attr-defined]
+    reader = PdfReader(project / "report" / "pentest-report.pdf")
+    box = reader.pages[0].mediabox
+    assert (float(box.width), float(box.height)) == pytest.approx(size, abs=1)
+    assert not (project / "report" / "pentest-report.html").exists()  # only what was asked
+
+
+def test_invalid_paper_is_a_usage_error(runner: CliRunner, project: Path) -> None:
+    assert _build(runner, "-f", "pdf", "--paper", "a3").exit_code == 2  # type: ignore[attr-defined]
+
+
+def test_missing_pdf_libraries_still_write_html_and_md(
+    runner: CliRunner, project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fail(name: str) -> object:
+        raise OSError("cannot load library 'libpango-1.0-0': cannot open shared object file")
+
+    monkeypatch.setattr(pdf_module.importlib, "import_module", fail)
+    result = _build(runner)  # default: all formats
     assert result.exit_code == 3  # type: ignore[attr-defined]
-    assert "PDF" in result.stderr  # type: ignore[attr-defined]
     assert (project / "report" / "pentest-report.html").is_file()
     assert (project / "report" / "pentest-report.md").is_file()
+    assert not (project / "report" / "pentest-report.pdf").exists()
+    stderr = result.stderr  # type: ignore[attr-defined]
+    assert (
+        "error: PDF output is unavailable: cannot load the system library libpango-1.0-0" in stderr
+    )
+    assert "hint: " in stderr
+    assert "docker run" in stderr
+    assert "Traceback" not in result.output  # type: ignore[attr-defined]
+    assert "Wrote report/pentest-report.html" in result.stdout  # type: ignore[attr-defined]
 
 
 def test_help_lists_every_flag(runner: CliRunner, plain: Callable[[str], str]) -> None:
     text = plain(runner.invoke(app, ["build", "--help"]).stdout)
     for flag in ("--format", "-f", "--output-dir", "-o", "--name", "-n", "--template-dir",
-                 "--no-redact", "--strict", "--quiet", "-q"):  # fmt: skip
+                 "--paper", "--no-redact", "--strict", "--quiet", "-q"):  # fmt: skip
         assert flag in text, flag

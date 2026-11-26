@@ -734,5 +734,5 @@ Each milestone is complete only when **all** of its acceptance criteria pass in 
 | Q-03 | Should redaction optionally use consistent pseudonyms (`[REDACTED:EMAIL#1]`, `#2`) so readers can tell distinct values apart? | Not in v0.1 (plain tokens) |
 | Q-04 | Should custom regexes run with a timeout, using the third-party `regex` module instead of `re`? | Use `re` in v0.1. Revisit if R-03 shows up in practice |
 | Q-05 | Is a `retest` workflow needed (for example `retest_date` and before/after status per finding)? | Out of scope. The `status` field covers the basic case |
-| Q-06 | Which OFL font family should the `classic` theme bundle (Inter, Source Sans 3, IBM Plex)? | Decide in M5, based on wheel size (NFR-12 ≤ 2 MB) and rendering quality |
+| Q-06 | Which OFL font family should the `classic` theme bundle (Inter, Source Sans 3, IBM Plex)? | **Decided (M6.1):** Source Sans 3 (Regular, Italic, Bold) plus Source Code Pro Regular for evidence, from Adobe's npm releases. The wheel is about 0.7 MB. The fonts are used for PDF only; the HTML report stays self-contained and uses the same names in its font stack |
 | Q-07 | Should HTML/MD work on Windows without Docker (CI-tested), even though PDF is unsupported there? | No official support in v0.1. Accept community reports |

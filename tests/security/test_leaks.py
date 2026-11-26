@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 
 import pytest
+from pypdf import PdfReader
 from typer.testing import CliRunner
 
 from pentrep.cli import app
@@ -95,3 +96,14 @@ def test_no_redact_really_contains_the_secrets(
     runner.invoke(app, ["build", str(leaky_project), "-f", "md", "-o", str(out), "--no-redact"])
     md = (out / "pentest-report.md").read_text("utf-8")
     assert sum(secret in md for secret in leaky_secrets) >= 18
+
+
+@pytest.mark.pdf
+def test_pdf_has_no_leaks(runner: CliRunner, leaky_project: Path, no_leaks: Leak) -> None:
+    out = leaky_project.parent / "out"
+    result = runner.invoke(app, ["--debug", "build", str(leaky_project), "-o", str(out)])
+    assert result.exit_code == 0, result.output
+    pdf_path = out / "pentest-report.pdf"
+    text = "\n".join(page.extract_text() for page in PdfReader(pdf_path).pages)
+    assert "[REDACTED:" in text  # extraction works, so an absent secret means it was redacted
+    no_leaks([text, pdf_path.read_bytes().decode("latin-1"), result.stdout, result.stderr])
