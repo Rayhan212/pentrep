@@ -337,9 +337,17 @@ Runnable at the end: `pentrep build examples/findings.yaml` (default `-f all`) p
   > the Markdown finding header and the PDF text, for `full.yaml` and `minimal.yaml` built with `-f all`. The PDF leak
   > test checks the extracted text (after confirming that extraction sees `[REDACTED:` tokens), the raw PDF bytes, and
   > stdout/stderr of a `--debug` build.
-- [ ] M6.7 CI: set `PENTREP_REQUIRE_PDF=1` so a skipped `pdf` test fails in CI; check that PDF tests run on ubuntu and macOS
+- [x] M6.7 CI: set `PENTREP_REQUIRE_PDF=1` so a skipped `pdf` test fails in CI; check that PDF tests run on ubuntu and macOS
   files: `tests/conftest.py`, `.github/workflows/ci.yml`
-- [ ] M6.8 verify: `uv run pytest -m pdf && uv run pentrep build examples/findings.yaml -o tmp/m6 && uv run pentrep build examples/findings.yaml -f pdf --paper letter -o tmp/m6-letter` (both exit 0, `tmp/m6/pentest-report.pdf` opens, and CI shows 0 skipped `pdf` tests)
+  > note: CI sets `PENTREP_REQUIRE_PDF=1`, so with missing libraries the run stops (`pytest.exit`, exit 1) instead
+  > of skipping; the run/skip/fail decision is a small tested function in `tests/conftest.py`. macOS jobs also set
+  > `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib` for cffi. CI run 45767770156: all 12 test jobs report 929 passed and
+  > 0 skipped, so the pdf tests run on ubuntu-22.04, ubuntu-24.04 and macos-latest.
+- [x] M6.8 verify: `uv run pytest -m pdf && uv run pentrep build examples/findings.yaml -o tmp/m6 && uv run pentrep build examples/findings.yaml -f pdf --paper letter -o tmp/m6-letter` (both exit 0, `tmp/m6/pentest-report.pdf` opens, and CI shows 0 skipped `pdf` tests)
+  > note: (2026-11-26): passed. Locally: `pytest -m pdf` gives 20 passed, 0 skipped; both builds exit 0; the A4 PDF
+  > has 7 pages of 595×842 pt and the Letter PDF has 8 pages of 612×792 pt, and both open with pypdf. CI run 45767770156
+  > is green (13/13 jobs, 0 skipped). A visual check of the rendered pages found long evidence lines running off the
+  > page; `tests/render/test_pdf.py::test_long_evidence_lines_wrap_inside_the_page` now guards this.
 
 ## M7 — Sample report, packaging, Docker & release
 Runnable at the end: `pipx install pentrep && pentrep init && pentrep build findings.yaml`, and `docker run … build findings.yaml`.
