@@ -35,6 +35,11 @@ class ErrorCode(Enum):
     E104 = ("E104", "Duplicate finding id")
     E105 = ("E105", "end_date is before start_date")
     E106 = ("E106", "Unsupported schema_version")
+    E201 = ("E201", "CVSS vector missing the CVSS:3.1/ prefix, or an unsupported version")
+    E202 = ("E202", "Unknown CVSS metric")
+    E203 = ("E203", "Invalid value for a CVSS metric")
+    E204 = ("E204", "Missing CVSS base metric(s)")
+    E205 = ("E205", "Duplicate CVSS metric")
     E206 = ("E206", "Both cvss_vector and severity given, or neither")
     E301 = ("E301", "Referenced file not found")
     E302 = ("E302", "Path resolves outside the project directory")
@@ -42,6 +47,7 @@ class ErrorCode(Enum):
     E304 = ("E304", "Invalid custom redaction regex, or invalid pattern name")
     W101 = ("W101", "Placeholder text found")
     W102 = ("W102", "Finding has no evidence")
+    W201 = ("W201", "Temporal/environmental CVSS metrics present; ignored in v0.1")
 
     def __new__(cls, code: str, summary: str) -> ErrorCode:
         """Use the code string as the enum value and keep the summary alongside it."""

@@ -17,6 +17,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import MarkedYAMLError, YAMLError
 from ruamel.yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
+from pentrep.cvss import parse_vector
 from pentrep.diagnostics import Diagnostic, ErrorCode, Level, sort_and_cap
 from pentrep.models import EVIDENCE_TYPES, Issue, Report, cross_checks
 
@@ -286,6 +287,26 @@ def check_files(doc: LoadedYaml, base_dir: Path) -> list[Diagnostic]:
     return diagnostics
 
 
+# --- CVSS vectors (E201-E205, W201) --------------------------------------------------------------
+
+
+def check_cvss(doc: LoadedYaml) -> list[Diagnostic]:
+    """Report every issue in each finding's ``cvss_vector``, at the vector's position."""
+    diagnostics: list[Diagnostic] = []
+    findings = doc.data.get("findings") if isinstance(doc.data, dict) else None
+    for index, finding in enumerate(findings if isinstance(findings, list) else []):
+        vector = finding.get("cvss_vector") if isinstance(finding, dict) else None
+        if not isinstance(vector, str) or not vector:
+            continue  # wrong type or empty: the model reports E103
+        path = f"findings[{index}].cvss_vector"
+        line, column = doc.position(path)
+        diagnostics.extend(
+            Diagnostic(issue.code, issue.message, doc.file, line, column, path, issue.hint)
+            for issue in parse_vector(vector).issues
+        )
+    return diagnostics
+
+
 # --- Warnings (W101, W102) ------------------------------------------------------------------------
 
 PLACEHOLDER_RE: Final = re.compile(r"\b(?:TODO|TBD|FIXME)\b|\blorem\s+ipsum\b", re.IGNORECASE)
@@ -433,6 +454,7 @@ def _from_pydantic(error: ErrorDetails, doc: LoadedYaml) -> Diagnostic:
 
     if kind in ErrorCode.__members__:
         code, message = ErrorCode[kind], error["msg"]
+        hint = ctx.get("hint")
     elif kind == "extra_forbidden":
         key = str(loc[-1])
         allowed = sorted({name for m in parents for name in m.model_fields})
@@ -488,6 +510,7 @@ def validate_document(doc: LoadedYaml, base_dir: Path | None = None) -> Validati
     diagnostics = [_from_issue(issue, doc) for issue in cross_checks(doc.data)]
     if base_dir is not None:
         diagnostics.extend(check_files(doc, base_dir))
+    diagnostics.extend(check_cvss(doc))
     diagnostics.extend(check_warnings(doc))
     report: Report | None = None
     try:

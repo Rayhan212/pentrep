@@ -116,6 +116,70 @@ e106_schema_version.yaml:1:17: error[E106] schema_version: unsupported schema_ve
 **Fix** — Set `schema_version: 1` (unquoted), or upgrade pentrep if the file was written for a newer
 release.
 
+## E201 — CVSS vector missing the CVSS:3.1/ prefix, or an unsupported version
+
+`cvss_vector` must start with `CVSS:3.1/` (case-sensitive, after trimming spaces). CVSS 3.0 vectors get a
+hint, because their base metrics are the same as in 3.1. CVSS 2 and 4 are not supported.
+
+**Example**
+
+```text
+e201_cvss_3_0_prefix.yaml:20:18: error[E201] findings[0].cvss_vector: CVSS version 3.0 is not supported
+  hint: change the prefix to 'CVSS:3.1/'; the 3.0 and 3.1 base metrics are the same
+```
+
+**Fix** — Use a CVSS 3.1 base vector, for example `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H`.
+
+## E202 — Unknown CVSS metric
+
+A metric name that is not part of CVSS 3.1, a wrongly-cased name (`av` instead of `AV`), or a part that
+is not in `METRIC:VALUE` form (including `//` or a trailing `/`).
+
+**Example**
+
+```text
+e202_unknown_metric.yaml:20:18: error[E202] findings[0].cvss_vector: unknown CVSS metric 'av'
+  hint: metric names are case-sensitive: did you mean 'AV'?
+```
+
+**Fix** — Use the base metric names `AV`, `AC`, `PR`, `UI`, `S`, `C`, `I` and `A`, in upper case.
+
+## E203 — Invalid value for a CVSS metric
+
+**Example**
+
+```text
+e203_invalid_value.yaml:20:18: error[E203] findings[0].cvss_vector: invalid value 'X' for metric 'AV'
+  hint: AV must be one of N (Network), A (Adjacent), L (Local), P (Physical)
+```
+
+**Fix** — Use one of the values listed in the hint. Values are case-sensitive.
+
+## E204 — Missing CVSS base metric(s)
+
+All 8 base metrics must be present.
+
+**Example**
+
+```text
+e204_missing_metric.yaml:20:18: error[E204] findings[0].cvss_vector: missing CVSS base metric 'UI'
+  hint: UI must be one of N (None), R (Required)
+```
+
+**Fix** — Add the missing metrics. The easiest way is to copy the full vector from the FIRST CVSS 3.1
+calculator.
+
+## E205 — Duplicate CVSS metric
+
+**Example**
+
+```text
+e205_duplicate_metric.yaml:20:18: error[E205] findings[0].cvss_vector: duplicate CVSS metric 'AV'
+  hint: each metric may appear only once
+```
+
+**Fix** — Remove the extra occurrence, and keep the value you meant.
+
 ## E206 — Both cvss_vector and severity given, or neither
 
 Every finding is scored with a CVSS 3.1 vector. Only an informational finding has no vector, and it is
@@ -217,3 +281,18 @@ w102_no_evidence.yaml:18:5: warning[W102] findings[0]: finding PT-001 has no evi
 
 **Fix** — Add at least one `text`, `http` or `image` evidence item, or accept the warning for findings
 that really have none.
+
+## W201 — Temporal/environmental CVSS metrics present
+
+The vector contains temporal (`E`, `RL`, `RC`) or environmental (`CR`, `IR`, `AR`, `MAV`, `MAC`, `MPR`,
+`MUI`, `MS`, `MC`, `MI`, `MA`) metrics. pentrep v0.1 calculates only the base score, so it ignores them
+and leaves them out of the canonical vector shown in the report. Their values are not checked.
+
+**Example**
+
+```text
+w201_temporal_metrics.yaml:20:18: warning[W201] findings[0].cvss_vector: temporal/environmental metrics are ignored in v0.1: E, RL
+  hint: only the base score is calculated; remove them to silence this warning
+```
+
+**Fix** — Remove the extra metrics, or accept the warning.

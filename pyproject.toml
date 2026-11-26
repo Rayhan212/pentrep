@@ -41,6 +41,7 @@ Issues = "https://github.com/Rayhan212/pentrep/issues"
 
 [dependency-groups]
 dev = [
+    "hypothesis>=6.140,<7",
     "jsonschema>=4.25,<5",
     "mypy>=2.4.1",
     "pre-commit>=4.7.0",

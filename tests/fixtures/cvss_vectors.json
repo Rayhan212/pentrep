@@ -1,0 +1,202 @@
+{
+  "description": "CVSS 3.1 base-score reference vectors for pentrep's unit tests (PRD §4.3, M3.5).",
+  "sources": {
+    "FIRST CVSS v3.1 Examples": "https://www.first.org/cvss/v3.1/examples (retrieved 2026-11-26); scores as published by FIRST",
+    "PRD §4.3": "reference table in docs/PRD.md"
+  },
+  "severity_note": "severity is derived from base_score with the CVSS v3.1 qualitative rating scale",
+  "vectors": [
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:L/A:N",
+      "base_score": 6.4,
+      "severity": "Medium",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2013-0375"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:N/A:N",
+      "base_score": 3.1,
+      "severity": "Low",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2014-3566"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H",
+      "base_score": 9.9,
+      "severity": "Critical",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2012-1516; PRD §4.3"
+    },
+    {
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:L/I:L/A:L",
+      "base_score": 4.2,
+      "severity": "Medium",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2009-0783"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H",
+      "base_score": 7.2,
+      "severity": "High",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2012-0384"
+    },
+    {
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+      "base_score": 7.8,
+      "severity": "High",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2009-0658, CVE-2015-1098, CVE-2018-18913"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "base_score": 7.5,
+      "severity": "High",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2014-0160; PRD §4.3"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "base_score": 9.8,
+      "severity": "Critical",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2014-6271; PRD §4.3"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:C/C:N/I:H/A:N",
+      "base_score": 6.8,
+      "severity": "Medium",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2008-1447"
+    },
+    {
+      "vector": "CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "base_score": 6.8,
+      "severity": "Medium",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2014-2005"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:L/I:N/A:N",
+      "base_score": 5.8,
+      "severity": "Medium",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2010-0467"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:N/I:L/A:N",
+      "base_score": 5.8,
+      "severity": "Medium",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2012-1342"
+    },
+    {
+      "vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:C/C:H/I:N/A:H",
+      "base_score": 9.3,
+      "severity": "Critical",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2013-6014"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:H/I:H/A:H",
+      "base_score": 9.0,
+      "severity": "Critical",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2019-7551"
+    },
+    {
+      "vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "base_score": 8.8,
+      "severity": "High",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2011-1265"
+    },
+    {
+      "vector": "CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N",
+      "base_score": 4.6,
+      "severity": "Medium",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2014-2019"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+      "base_score": 8.8,
+      "severity": "High",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2015-0970, CVE-2016-1645"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N",
+      "base_score": 7.4,
+      "severity": "High",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2014-0224"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H",
+      "base_score": 9.6,
+      "severity": "Critical",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2012-5376"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:N",
+      "base_score": 6.8,
+      "severity": "Medium",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2016-0128"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+      "base_score": 6.1,
+      "severity": "Medium",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2017-5942; PRD §4.3"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:L",
+      "base_score": 8.6,
+      "severity": "High",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2016-5558"
+    },
+    {
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H",
+      "base_score": 8.2,
+      "severity": "High",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2016-5729"
+    },
+    {
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:N/I:H/A:H",
+      "base_score": 6.0,
+      "severity": "Medium",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2015-2890"
+    },
+    {
+      "vector": "CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+      "base_score": 7.6,
+      "severity": "High",
+      "source": "FIRST CVSS v3.1 Examples: CVE-2018-3652"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+      "base_score": 10.0,
+      "severity": "Critical",
+      "source": "PRD §4.3 (not cross-checked with the FIRST calculator)"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "base_score": 8.8,
+      "severity": "High",
+      "source": "PRD §4.3 (not cross-checked with the FIRST calculator)"
+    },
+    {
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "base_score": 7.8,
+      "severity": "High",
+      "source": "PRD §4.3 (not cross-checked with the FIRST calculator)"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      "base_score": 6.5,
+      "severity": "Medium",
+      "source": "PRD §4.3 (not cross-checked with the FIRST calculator)"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "base_score": 5.9,
+      "severity": "Medium",
+      "source": "PRD §4.3 (not cross-checked with the FIRST calculator)"
+    },
+    {
+      "vector": "CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "base_score": 2.4,
+      "severity": "Low",
+      "source": "PRD §4.3 (not cross-checked with the FIRST calculator)"
+    },
+    {
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N",
+      "base_score": 0.0,
+      "severity": "None",
+      "source": "PRD §4.3 (not cross-checked with the FIRST calculator)"
+    }
+  ]
+}

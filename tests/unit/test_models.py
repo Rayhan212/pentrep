@@ -468,3 +468,48 @@ def test_neither_vector_nor_severity_is_e206(report: Data, finding: Data) -> Non
 )
 def test_cross_checks_tolerate_malformed_input(data: object) -> None:
     assert _issues(data) == []
+
+
+# --- CVSS integration (M3.7) -------------------------------------------------------------------
+
+
+def test_finding_exposes_computed_cvss(finding: Data) -> None:
+    parsed = Finding.model_validate(finding)
+    assert parsed.cvss is not None
+    assert parsed.cvss.base_score == 9.8
+    assert parsed.cvss.severity.label == "Critical"
+    assert parsed.cvss.vector.canonical() == finding["cvss_vector"]
+
+
+def test_finding_cvss_ignores_temporal_metrics(finding: Data) -> None:
+    finding["cvss_vector"] = "  " + finding["cvss_vector"] + "/E:P/RL:O "
+    parsed = Finding.model_validate(finding)
+    assert parsed.cvss is not None
+    assert parsed.cvss.vector.canonical() == "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+
+
+def test_informational_finding_has_no_cvss(finding: Data) -> None:
+    del finding["cvss_vector"]
+    finding["severity"] = "informational"
+    assert Finding.model_validate(finding).cvss is None
+
+
+@pytest.mark.parametrize(
+    ("vector", "code"),
+    [
+        ("AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", "E201"),
+        ("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H/XX:1", "E202"),
+        ("CVSS:3.1/AV:X/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", "E203"),
+        ("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H", "E204"),
+        ("CVSS:3.1/AV:N/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", "E205"),
+    ],
+)
+def test_invalid_vector_is_a_validation_error_with_hint(
+    finding: Data, vector: str, code: str
+) -> None:
+    finding["cvss_vector"] = vector
+    with pytest.raises(ValidationError) as exc_info:
+        Finding.model_validate(finding)
+    [error] = exc_info.value.errors()
+    assert (error["type"], error["loc"]) == (code, ("cvss_vector",))
+    assert error["ctx"]["hint"]

@@ -453,3 +453,45 @@ def test_warnings_and_errors_together() -> None:
     assert [d.code for d in result.diagnostics] == [ErrorCode.E103, ErrorCode.W101]
     assert result.errors == result.diagnostics[:1]
     assert not result.ok
+
+
+# --- CVSS diagnostics (M3.7) -------------------------------------------------------------------
+
+VECTOR = '"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"'
+
+
+def test_every_vector_issue_is_reported_at_the_vector_position() -> None:
+    text = VALID.replace(VECTOR, '"CVSS:3.1/AV:X/AC:L/AC:H/ZZ:1/S:U/C:H/I:H/A:H/E:P"')
+    result = validate_document(parse_yaml(text, file="f.yaml"))
+    assert [(d.code.value, d.path, d.line, d.column) for d in result.diagnostics] == [
+        ("E202", "findings[0].cvss_vector", 19, 18),
+        ("E203", "findings[0].cvss_vector", 19, 18),
+        ("E204", "findings[0].cvss_vector", 19, 18),
+        ("E205", "findings[0].cvss_vector", 19, 18),
+        ("W201", "findings[0].cvss_vector", 19, 18),
+    ]
+    assert all(d.hint for d in result.diagnostics)
+    assert result.report is None
+
+
+def test_single_vector_error_is_not_duplicated() -> None:
+    text = VALID.replace(VECTOR, '"CVSS:3.1/AV:X/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"')
+    diagnostics = validate_document(parse_yaml(text, file="f.yaml")).diagnostics
+    assert [d.code.value for d in diagnostics] == ["E203"]
+    assert diagnostics[0].message == "invalid value 'X' for metric 'AV'"
+    assert diagnostics[0].hint == (
+        "AV must be one of N (Network), A (Adjacent), L (Local), P (Physical)"
+    )
+
+
+def test_w201_alone_keeps_the_report() -> None:
+    text = VALID.replace(VECTOR, VECTOR[:-1] + '/E:P"')
+    result = validate_document(parse_yaml(text, file="f.yaml"))
+    assert [d.code.value for d in result.diagnostics] == ["W201"]
+    assert result.report is not None
+    assert result.report.findings[0].cvss is not None
+
+
+def test_empty_vector_is_only_e103() -> None:
+    text = VALID.replace(VECTOR, '""')
+    assert [c for c, *_ in _validate(text)] == ["E103"]

@@ -61,10 +61,9 @@ def test_invalid_fixture_reports_the_code_in_its_name(path: Path) -> None:
         assert not result.ok
 
 
-def test_every_e1xx_e3xx_w1xx_code_has_a_fixture() -> None:
+def test_every_code_has_a_fixture() -> None:
     covered = {ErrorCode[p.stem.split("_", 1)[0].upper()] for p in INVALID}
-    wanted = {c for c in ErrorCode if c.value[:2] in ("E1", "E3", "W1")}
-    assert wanted - CODES_WITHOUT_FIXTURES_YET <= covered
+    assert set(ErrorCode) - CODES_WITHOUT_FIXTURES_YET <= covered
 
 
 def test_every_invalid_fixture_has_an_expected_file() -> None:

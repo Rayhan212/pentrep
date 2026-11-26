@@ -12,10 +12,19 @@ import os
 from dataclasses import dataclass
 from typing import Annotated, Final, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, ValidationInfo, field_validator
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    computed_field,
+    field_validator,
+)
 from pydantic_core import PydanticCustomError
 
-from pentrep.diagnostics import ErrorCode
+from pentrep.cvss import CvssScore, calculate, parse_vector
+from pentrep.diagnostics import ErrorCode, Level
 
 ISO_DATE_LENGTH: Final = len("YYYY-MM-DD")
 
@@ -170,6 +179,30 @@ class Finding(StrictModel):
     evidence: list[Evidence] = Field(default_factory=list, max_length=30)
     remediation: str = Field(min_length=20)
     references: list[HttpUrlStr] = Field(default_factory=list)
+
+    @field_validator("cvss_vector")
+    @classmethod
+    def _valid_vector(cls, value: str | None) -> str | None:
+        """Reject vectors with E2xx errors. All issues (and W201) are reported by the loader."""
+        if value is None:
+            return None
+        errors = [i for i in parse_vector(value).issues if i.code.level is Level.ERROR]
+        if errors:
+            raise PydanticCustomError(
+                errors[0].code.value,
+                "{message}",
+                {"message": errors[0].message, "hint": errors[0].hint},
+            )
+        return value
+
+    @computed_field  # type: ignore[prop-decorator]  # mypy does not model Pydantic's decorator
+    @property
+    def cvss(self) -> CvssScore | None:
+        """Base score, sub-scores and severity of ``cvss_vector`` (``None`` if informational)."""
+        if self.cvss_vector is None:
+            return None
+        vector = parse_vector(self.cvss_vector).vector
+        return calculate(vector) if vector else None
 
 
 class CustomPattern(StrictModel):

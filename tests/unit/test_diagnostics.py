@@ -25,12 +25,12 @@ def test_exit_codes_match_prd() -> None:
     assert ExitCode.RENDER_ERROR == 3
 
 
-def test_error_codes_for_m2() -> None:
+def test_error_codes() -> None:
     expected = {
         "E100", "E101", "E102", "E103", "E104", "E105", "E106",
-        "E206",
+        "E201", "E202", "E203", "E204", "E205", "E206",
         "E301", "E302", "E303", "E304",
-        "W101", "W102",
+        "W101", "W102", "W201",
     }  # fmt: skip
     assert {code.value for code in ErrorCode} == expected
 

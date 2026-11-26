@@ -114,23 +114,48 @@ Runnable at the end: `pentrep init`, then `pentrep validate` with file:line:col 
 ## M3 — CVSS 3.1 calculator
 Runnable at the end: `pentrep validate` scores each finding and prints the severity breakdown; invalid vectors produce E2xx errors with hints.
 
-- [ ] M3.1 TDD: `roundup()` using the integer algorithm from spec Appendix A, with the edge cases 4.02, 4.00 and 4.000000000000001
+- [x] M3.1 TDD: `roundup()` using the integer algorithm from spec Appendix A, with the edge cases 4.02, 4.00 and 4.000000000000001
   files: `src/pentrep/cvss.py`, `tests/unit/test_cvss.py`
-- [ ] M3.2 TDD: vector parser: `CVSS:3.1/` prefix, metrics in any order, case-sensitive; E201–E205 with hints; temporal/environmental metrics trigger W201; `CvssVector.canonical()`. Add the E2xx/W201 codes
+- [x] M3.2 TDD: vector parser: `CVSS:3.1/` prefix, metrics in any order, case-sensitive; E201–E205 with hints; temporal/environmental metrics trigger W201; `CvssVector.canonical()`. Add the E2xx/W201 codes
   files: `src/pentrep/cvss.py`, `src/pentrep/diagnostics.py`, `tests/unit/test_cvss.py`
-- [ ] M3.3 TDD: weights (with PR adjusted when S:C), ISS, Impact, Exploitability, base score, and sub-scores rounded to one decimal
+  > note: the parser collects every issue in a vector instead of stopping at the first. A wrongly-cased
+  > base metric (`av`) is a single E202 with a "did you mean" hint, not E202 plus E204. Malformed parts (`AVN`,
+  > `//`, a trailing `/`) are E202. Values of ignored metrics are not checked. `docs/errors.md` got the new codes
+  > now, because the M2.13 sync test requires them; the examples are replaced with fixture output in M3.7.
+- [x] M3.3 TDD: weights (with PR adjusted when S:C), ISS, Impact, Exploitability, base score, and sub-scores rounded to one decimal
   files: `src/pentrep/cvss.py`, `tests/unit/test_cvss.py`
-- [ ] M3.4 TDD: `Severity` enum with the bands and ordering (None/Informational < Low < … < Critical)
+  > note: the FIRST library (`cvsscalc31.js`) returns raw sub-scores. pentrep rounds Impact and
+  > Exploitability half up to one decimal, the same way NVD shows them (6.1 XSS vector → 2.7 / 2.8), not with
+  > Roundup. A negative Impact (S:C with C/I/A:N) is shown as 0.0.
+- [x] M3.4 TDD: `Severity` enum with the bands and ordering (None/Informational < Low < … < Critical)
   files: `src/pentrep/cvss.py`, `tests/unit/test_cvss.py`
-- [ ] M3.5 Reference vectors: build `cvss_vectors.json` with ≥ 30 vectors (the 11 from PRD §4.3 plus more) cross-checked with the official FIRST calculator; add a parametrised test
+  > note: `Severity.NONE` and `Severity.INFORMATIONAL` have the same rank (neither is `<` the other)
+  > but stay different members. `from_score` rejects scores outside 0.0–10.0.
+- [x] M3.5 Reference vectors: build `cvss_vectors.json` with ≥ 30 vectors (the 11 from PRD §4.3 plus more) cross-checked with the official FIRST calculator; add a parametrised test
   files: `tests/fixtures/cvss_vectors.json`, `tests/unit/test_cvss.py`
-- [ ] M3.6 Property tests with hypothesis (score range, one decimal, monotonic C/I/A, idempotent canonical form), 1,000 examples each. Add the `hypothesis` dev dep
+  > note: 32 unique vectors. 25 come from FIRST's official "CVSS v3.1 Examples" page (28 examples,
+  > read as data; every published score matches). The 7 vectors that are only in the PRD table (10.0, 8.8 PR:L,
+  > 7.8 AV:L/PR:L, 6.5, 5.9, 2.4, 0.0) are marked "not cross-checked with the FIRST calculator": running FIRST's
+  > `cvsscalc31.js` locally was blocked by the session's permission policy, and the user chose (2026-11-26) to
+  > keep them with this note. They can be confirmed in the FIRST web calculator later.
+- [x] M3.6 Property tests with hypothesis (score range, one decimal, monotonic C/I/A, idempotent canonical form), 1,000 examples each. Add the `hypothesis` dev dep
   files: `tests/unit/test_cvss_properties.py`, `pyproject.toml`, `uv.lock`
-- [ ] M3.7 Integration: a computed `Finding.cvss` field; CVSS diagnostics carry the vector's line/col; invalid fixtures `e201`–`e205` and `w201` with `.expected.txt`; update `docs/errors.md`
+  > note: example order is not guaranteed by `fixed_dictionaries`, so the test builds vectors in
+  > specification order explicitly. Mutation check: setting the C:H weight to 0.10 makes the monotonicity property fail.
+- [x] M3.7 Integration: a computed `Finding.cvss` field; CVSS diagnostics carry the vector's line/col; invalid fixtures `e201`–`e205` and `w201` with `.expected.txt`; update `docs/errors.md`
   files: `src/pentrep/models.py`, `src/pentrep/loader.py`, `tests/fixtures/invalid/*`, `docs/errors.md`
-- [ ] M3.8 TDD: `stats.py` with finding order (FR-42), severity counts and overall risk (FR-43); `validate` success line gains `(1 critical, 1 medium)`
+  > note: `Finding.cvss` is a Pydantic `computed_field`. The loader reports every issue in a vector
+  > (including W201) at the vector's position; the model validator raises only the first error, and that
+  > duplicate is removed. The fixture-coverage test now requires a fixture for every code except E304.
+- [x] M3.8 TDD: `stats.py` with finding order (FR-42), severity counts and overall risk (FR-43); `validate` success line gains `(1 critical, 1 medium)`
   files: `src/pentrep/stats.py`, `tests/unit/test_stats.py`, `src/pentrep/cli.py`, `tests/cli/test_validate.py`
-- [ ] M3.9 verify: `uv run pytest --cov=pentrep.cvss --cov-branch --cov-fail-under=95 tests/unit/test_cvss*.py && uv run pentrep validate examples/findings.yaml` (prints "2 findings (1 critical, 1 medium)")
+  > note: the Informational/None bucket is shown as `N informational` in the CLI breakdown. If the only
+  > open findings are 0.0 or informational, the overall risk is Informational when any of them is informational,
+  > else None.
+- [x] M3.9 verify: `uv run pytest --cov=pentrep.cvss --cov-branch --cov-fail-under=95 tests/unit/test_cvss*.py && uv run pentrep validate examples/findings.yaml` (prints "2 findings (1 critical, 1 medium)")
+  > note: (2026-11-26): passed locally. `cvss.py` has 100 % line and branch coverage (149 CVSS tests);
+  > the full suite is 539 tests at 98.9 % overall coverage. `validate examples/findings.yaml` prints
+  > "2 findings (1 critical, 1 medium), 0 warnings". CI has not run yet because the branch is not pushed.
 
 ## M4 — PII redaction
 Runnable at the end: `pentrep validate` checks redaction config (E304) and prints a redaction preview summary.

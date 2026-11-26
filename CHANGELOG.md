@@ -16,3 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `file:line:col`, a stable code (E100–E106, E206, E301–E303, W101, W102) and a hint.
 - `pentrep schema [-o FILE]` prints the JSON Schema (draft 2020-12).
 - Docs: `docs/errors.md` and `docs/schema.md`.
+- CVSS 3.1 base-score calculator (`pentrep.cvss`): vector parser with E201–E205 errors and W201 for
+  ignored temporal/environmental metrics, canonical vectors, Roundup from spec Appendix A, sub-scores and
+  severity bands. Checked against FIRST's published CVSS v3.1 examples and with property-based tests.
+- `Finding.cvss` computed field; `stats` module with finding order, severity counts and overall risk.
+- `validate` success line shows the severity breakdown, e.g. `2 findings (1 critical, 1 medium)`.

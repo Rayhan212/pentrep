@@ -17,6 +17,7 @@ from pentrep import __version__
 from pentrep.diagnostics import ExitCode, format_json, format_text
 from pentrep.loader import load_report
 from pentrep.models import json_schema
+from pentrep.stats import breakdown, compute_stats
 
 
 @dataclass
@@ -140,8 +141,10 @@ def validate(
             note = " (--strict treats warnings as errors)" if not errors else ""
             typer.echo(f"✗ {name} is invalid: {summary}{note}", err=True)
         else:
-            count = len(result.report.findings) if result.report else 0
-            findings = _count(count, "finding")
+            report_findings = result.report.findings if result.report else []
+            findings = _count(len(report_findings), "finding")
+            if report_findings:
+                findings += f" ({breakdown(compute_stats(report_findings))})"
             typer.echo(f"✓ {name} is valid: {findings}, {_count(warnings, 'warning')}")
     if failed:
         raise typer.Exit(ExitCode.VALIDATION_FAILED)
