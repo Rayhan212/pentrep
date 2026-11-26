@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
+from pentrep.cli import app
 from pentrep.diagnostics import ErrorCode
 
 DOCS = Path(__file__).parent.parent.parent / "docs"
@@ -57,3 +60,32 @@ def test_errors_md_examples_match_the_fixture_goldens() -> None:
     for match in example.finditer(text):
         golden = (invalid / f"{match.group(1)}.expected.txt").read_text(encoding="utf-8")
         assert match.group(0) in golden.splitlines(), match.group(0)
+
+
+def test_readme_has_the_m7_sections() -> None:
+    """M7.7 / FR-62: quickstart, install matrix, Docker, screenshots, sample report, notices."""
+    readme = (DOCS.parent / "README.md").read_text(encoding="utf-8")
+    quickstart = readme[readme.index("## Quickstart") :].split("```bash\n", 1)[1].split("```", 1)[0]
+    assert [line.split()[0] for line in quickstart.strip().splitlines()] == [
+        "pipx", "pentrep", "pentrep"
+    ]  # fmt: skip
+    for text in (
+        "libpango-1.0-0", "brew install pango",
+        'docker run --rm -v "$PWD:/work" ghcr.io/rayhan212/pentrep',
+        "](docs/img/cover.png)", "](docs/img/finding.png)",
+        "https://rayhan212.github.io/pentrep/",
+        "safety net", "(docs/errors.md)",
+    ):  # fmt: skip
+        assert text in readme, text
+    for image in ("cover.png", "finding.png"):
+        assert (DOCS / "img" / image).stat().st_size > 1000
+
+
+def test_readme_lists_every_cli_flag(plain: Callable[[str], str]) -> None:
+    """NFR-13: every CLI flag appears in --help and in the README."""
+    readme = (DOCS.parent / "README.md").read_text(encoding="utf-8")
+    runner = CliRunner()
+    for command in ("init", "validate", "build", "schema"):
+        help_text = plain(runner.invoke(app, [command, "--help"]).stdout)
+        for flag in set(re.findall(r"(?<![\w-])--[a-z][a-z-]+", help_text)) - {"--help"}:
+            assert f"`{flag}" in readme or f" {flag}" in readme, f"{command} {flag}"
