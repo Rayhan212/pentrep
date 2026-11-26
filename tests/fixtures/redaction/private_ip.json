@@ -1,0 +1,32 @@
+{
+  "positive": [
+    {
+      "text": "X-Backend-Host: 10.20.0.15",
+      "expected": "X-Backend-Host: [REDACTED:PRIVATE_IP]"
+    },
+    {
+      "text": "connect 192.168.1.1:8080",
+      "expected": "connect [REDACTED:PRIVATE_IP]:8080"
+    },
+    {
+      "text": "172.16.0.1 and 172.31.255.254",
+      "expected": "[REDACTED:PRIVATE_IP] and [REDACTED:PRIVATE_IP]"
+    },
+    {
+      "text": "GET http://169.254.169.254/latest/meta-data/",
+      "expected": "GET http://[REDACTED:PRIVATE_IP]/latest/meta-data/"
+    },
+    {
+      "text": "The host was 10.1.2.3.",
+      "expected": "The host was [REDACTED:PRIVATE_IP]."
+    }
+  ],
+  "negative": [
+    "public resolver 8.8.8.8",
+    "loopback 127.0.0.1",
+    "documentation range 203.0.113.10, 198.51.100.7 and 192.0.2.1",
+    "172.32.0.1 is just outside the private 172.16/12 block",
+    "10.0.0.256 is not an address",
+    "version 10.2.3.4.5 has five parts"
+  ]
+}

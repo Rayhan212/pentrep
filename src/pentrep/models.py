@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import datetime as dt
 import os
+import re
 from dataclasses import dataclass
 from typing import Annotated, Final, Literal
 
@@ -25,6 +26,7 @@ from pydantic_core import PydanticCustomError
 
 from pentrep.cvss import CvssScore, calculate, parse_vector
 from pentrep.diagnostics import ErrorCode, Level
+from pentrep.redact import BUILTIN_NAMES, NAME_RE
 
 ISO_DATE_LENGTH: Final = len("YYYY-MM-DD")
 
@@ -205,11 +207,42 @@ class Finding(StrictModel):
         return calculate(vector) if vector else None
 
 
-class CustomPattern(StrictModel):
-    """A user-defined redaction pattern (name and regex are checked further in M4, E304)."""
+def _e304(message: str, hint: str) -> PydanticCustomError:
+    return PydanticCustomError("E304", "{message}", {"message": message, "hint": hint})
 
-    name: str = Field(min_length=1)
-    regex: str = Field(min_length=1)
+
+class CustomPattern(StrictModel):
+    """A user-defined redaction pattern (FR-33); problems are E304."""
+
+    name: str
+    regex: str
+
+    @field_validator("name")
+    @classmethod
+    def _valid_name(cls, name: str) -> str:
+        if not NAME_RE.match(name):
+            raise _e304(
+                f"invalid pattern name {name!r}",
+                "names match ^[A-Z][A-Z0-9_]{1,31}$, for example ACME_EMPLOYEE_ID",
+            )
+        if name in BUILTIN_NAMES:
+            raise _e304(
+                f"pattern name {name!r} is already used by a built-in pattern",
+                "choose another name, for example ACME_" + name,
+            )
+        return name
+
+    @field_validator("regex")
+    @classmethod
+    def _valid_regex(cls, regex: str) -> str:
+        try:
+            re.compile(regex)
+        except re.error as exc:
+            raise _e304(
+                f"invalid regex: {exc}",
+                "use Python re syntax; a (?P<value>...) group redacts only that part",
+            ) from None
+        return regex
 
 
 class Redaction(StrictModel):

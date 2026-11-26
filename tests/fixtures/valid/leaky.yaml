@@ -1,0 +1,81 @@
+# Seeds 20 unique FAKE secrets, one or more per redaction pattern (M4.9 leak tests).
+# '<<PRIVATE KEY>>' is replaced with 'PRIVATE KEY' by the `leaky_project` fixture in tests/conftest.py,
+# so the detect-private-key hook does not flag this file. Secrets never appear in fields that are not
+# redacted (titles, assets, references, engagement metadata).
+schema_version: 1
+
+engagement:
+  title: "Leak Test Engagement"
+  client:
+    name: "Example Corp"
+  testers:
+    - name: "Alex Tester"
+  start_date: 2026-11-02
+  end_date: 2026-11-13
+  scope:
+    in_scope:
+      - asset: "https://app.example.test"
+        type: url
+  methodology: "Grey-box testing of the example application."
+
+redaction:
+  apply_to_all_text: true
+  custom_patterns:
+    - name: ACME_EMPLOYEE_ID
+      regex: 'ACME-\d{6}'
+
+findings:
+  - id: LK-001
+    title: "Secrets in HTTP Traffic"
+    cvss_vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+    affected_assets:
+      - "https://app.example.test/api"
+    description: "Mail from leaky.person14@acme.example confirmed the internal host 10.14.15.16 was reachable."
+    impact: "Employee ACME-190019 data and card 5555 5555 5555 4444 were exposed to attackers."
+    steps_to_reproduce:
+      - "Send POST /login with password=leakyPassword0008 and api_key=leakyApiKey0009."
+      - "Reuse the refresh_token=leakyRefresh0020 value."
+    evidence:
+      - type: http
+        caption: "Login request and response"
+        content: |
+          POST /login HTTP/1.1
+          Host: app.example.test
+          Authorization: Bearer leakyBearerToken0003
+          Cookie: sid=leakycookie0005; pref=leakycookie0006
+
+          {"client_secret":"leakyClientSecret0010","access_token":"leakyAccessToken0011"}
+
+          HTTP/1.1 200 OK
+          Set-Cookie: session=leakycookie0005; Path=/; HttpOnly
+          X-Upstream: 192.168.17.17
+
+          {"jwt":"eyJhbGciOiJIUzI1NiJ9.eyJsZWFreSI6MX0.bGVha3lzaWc","card":"4111111111111111"}
+      - type: text
+        caption: "Leaked configuration"
+        language: ini
+        content: |
+          aws_access_key_id = AKIALEAKYKEY00000007
+          proxy_auth = Authorization: Basic bGVha3k6YmFzaWMwMDA0
+          notify = victim15@corp.example
+          db_host = 172.18.0.18
+    remediation: "Rotate the key stored in the deploy host and review ACME-190019 access."
+
+  - id: LK-002
+    title: "Private Key in Backup"
+    cvss_vector: "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+    affected_assets:
+      - "https://app.example.test/backup.tar"
+    description: "A backup archive contains an unencrypted private key for the deploy user."
+    impact: "Anyone who downloads the archive can log in to the deploy host over SSH."
+    steps_to_reproduce:
+      - "Download the backup archive."
+      - "Extract id_rsa from the archive."
+    evidence:
+      - type: text
+        caption: "Contents of id_rsa"
+        content: |
+          -----BEGIN RSA <<PRIVATE KEY>>-----
+          MIIEowIBAAKCAQEAleakyKEYbody0001
+          -----END RSA <<PRIVATE KEY>>-----
+    remediation: "Remove the key from the backup, rotate it and restrict backup access."

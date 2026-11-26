@@ -14,8 +14,6 @@ from pentrep.loader import load_report
 FIXTURES = Path(__file__).parent.parent / "fixtures"
 VALID = sorted((FIXTURES / "valid").glob("*.yaml"))
 INVALID = sorted((FIXTURES / "invalid").glob("*.yaml"))
-# E304 fixtures arrive with the redaction config in M4.5.
-CODES_WITHOUT_FIXTURES_YET = {ErrorCode.E304}
 
 
 def _ids(paths: list[Path]) -> list[str]:
@@ -63,7 +61,7 @@ def test_invalid_fixture_reports_the_code_in_its_name(path: Path) -> None:
 
 def test_every_code_has_a_fixture() -> None:
     covered = {ErrorCode[p.stem.split("_", 1)[0].upper()] for p in INVALID}
-    assert set(ErrorCode) - CODES_WITHOUT_FIXTURES_YET <= covered
+    assert set(ErrorCode) <= covered
 
 
 def test_every_invalid_fixture_has_an_expected_file() -> None:

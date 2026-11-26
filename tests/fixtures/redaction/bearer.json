@@ -1,0 +1,31 @@
+{
+  "positive": [
+    {
+      "text": "Authorization: Bearer abc.DEF-123_xyz",
+      "expected": "Authorization: Bearer [REDACTED:BEARER]"
+    },
+    {
+      "text": "authorization: basic YWRtaW46aHVudGVyMg==",
+      "expected": "authorization: basic [REDACTED:BEARER]"
+    },
+    {
+      "text": "GET / HTTP/1.1\nHost: api.example.test\nAuthorization:Bearer   tok3n\nAccept: */*",
+      "expected": "GET / HTTP/1.1\nHost: api.example.test\nAuthorization:Bearer   [REDACTED:BEARER]\nAccept: */*"
+    },
+    {
+      "text": "Proxy-Authorization: Basic dXNlcjpwYXNz",
+      "expected": "Proxy-Authorization: Basic [REDACTED:BEARER]"
+    },
+    {
+      "text": "curl -H 'AUTHORIZATION: BEARER sk_live_fake9' https://api.example.test",
+      "expected": "curl -H 'AUTHORIZATION: BEARER [REDACTED:BEARER]' https://api.example.test"
+    }
+  ],
+  "negative": [
+    "The Authorization header is missing.",
+    "A Bearer token is required for this endpoint.",
+    "Authorization: Negotiate",
+    "WWW-Authenticate: Bearer realm=\"api\"",
+    "Authorization: Bearer"
+  ]
+}

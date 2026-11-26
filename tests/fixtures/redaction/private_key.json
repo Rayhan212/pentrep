@@ -1,0 +1,32 @@
+{
+  "_comment": "'<<PRIVATE KEY>>' is replaced with 'PRIVATE KEY' by the test, so the detect-private-key hook does not flag this file. The key bodies are random filler, not real keys.",
+  "positive": [
+    {
+      "text": "-----BEGIN RSA <<PRIVATE KEY>>-----\nMIIEowIBAAKCAQEAfake0000\nZZZZ==\n-----END RSA <<PRIVATE KEY>>-----",
+      "expected": "[REDACTED:PRIVATE_KEY]"
+    },
+    {
+      "text": "key:\n-----BEGIN <<PRIVATE KEY>>-----\nMC4CAQAwBQYDK2VwBCIEIfakefake\n-----END <<PRIVATE KEY>>-----\nafter",
+      "expected": "key:\n[REDACTED:PRIVATE_KEY]\nafter"
+    },
+    {
+      "text": "-----BEGIN OPENSSH <<PRIVATE KEY>>-----\nb3BlbnNzaC1rZXktdjEfake\n-----END OPENSSH <<PRIVATE KEY>>-----",
+      "expected": "[REDACTED:PRIVATE_KEY]"
+    },
+    {
+      "text": "-----BEGIN EC <<PRIVATE KEY>>-----\nMHcCAQEEIfake\n-----END EC <<PRIVATE KEY>>----- and more -----BEGIN DSA <<PRIVATE KEY>>-----\nMIIBuwfake\n-----END DSA <<PRIVATE KEY>>-----",
+      "expected": "[REDACTED:PRIVATE_KEY] and more [REDACTED:PRIVATE_KEY]"
+    },
+    {
+      "text": "$ cat id_rsa\n-----BEGIN ENCRYPTED <<PRIVATE KEY>>-----\nMIIFHzBJBgkqfake\n(output truncated)",
+      "expected": "$ cat id_rsa\n[REDACTED:PRIVATE_KEY]"
+    }
+  ],
+  "negative": [
+    "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAfake\n-----END PUBLIC KEY-----",
+    "-----BEGIN CERTIFICATE-----\nMIIDdzCCAl+gAwIBAgIEfake\n-----END CERTIFICATE-----",
+    "The server's private key file lives in /etc/ssl/private.",
+    "BEGIN RSA <<PRIVATE KEY>> appears in the log without the dashes.",
+    "-----BEGIN PGP SIGNATURE-----\niQEzBAEBCAAdFiEEfake\n-----END PGP SIGNATURE-----"
+  ]
+}

@@ -35,23 +35,24 @@ def _edit(project: Path, old: str, new: str) -> None:
 def test_valid_file_prints_success_line(runner: CliRunner, project: Path) -> None:
     result = runner.invoke(app, ["validate", "findings.yaml"])
     assert result.exit_code == 0
-    assert result.stdout == "✓ findings.yaml is valid: 1 finding (1 low), 0 warnings\n"
+    assert result.stdout == (
+        "✓ findings.yaml is valid: 1 finding (1 low), 0 warnings\n"
+        "Redaction preview: no values would be redacted\n"
+    )
     assert result.stderr == ""
 
 
 def test_full_example_counts_findings(runner: CliRunner) -> None:
     result = runner.invoke(app, ["validate", str(FIXTURES / "valid" / "full.yaml")])
     assert result.exit_code == 0
-    assert result.stdout.endswith(
-        "full.yaml is valid: 2 findings (1 critical, 1 medium), 0 warnings\n"
-    )
+    assert "full.yaml is valid: 2 findings (1 critical, 1 medium), 0 warnings\n" in result.stdout
 
 
 def test_warnings_go_to_stderr_and_do_not_fail(runner: CliRunner, project: Path) -> None:
     _edit(project, '"Minimal Example Engagement"', '"Minimal Example Engagement TBD"')
     result = runner.invoke(app, ["validate", "findings.yaml"])
     assert result.exit_code == 0
-    assert result.stdout == "✓ findings.yaml is valid: 1 finding (1 low), 1 warning\n"
+    assert result.stdout.startswith("✓ findings.yaml is valid: 1 finding (1 low), 1 warning\n")
     assert result.stderr.startswith("findings.yaml:5:10: warning[W101] engagement.title: ")
 
 
@@ -137,3 +138,27 @@ def test_examples_file_prints_severity_breakdown(runner: CliRunner) -> None:
     result = runner.invoke(app, ["validate", str(examples)])
     assert result.exit_code == 0
     assert "is valid: 2 findings (1 critical, 1 medium), 0 warnings" in result.stdout
+
+
+def test_examples_file_prints_redaction_preview(runner: CliRunner) -> None:
+    examples = Path(__file__).parent.parent.parent / "examples" / "findings.yaml"
+    lines = runner.invoke(app, ["validate", str(examples)]).stdout.splitlines()
+    assert lines[1:] == [
+        "Redaction preview: 6 values in 2 findings would be redacted: SECRET×1, COOKIE×1, JWT×1, "
+        "EMAIL×1, ACME_EMPLOYEE_ID×1, PRIVATE_IP×1",
+        "Note: 1 image evidence item was not scanned (image redaction is not supported in v0.1)",
+    ]
+
+
+def test_preview_when_redaction_is_disabled(runner: CliRunner, project: Path) -> None:
+    _edit(project, "\nfindings:\n", "\nredaction:\n  enabled: false\n\nfindings:\n")
+    result = runner.invoke(app, ["validate", "findings.yaml"])
+    assert result.exit_code == 0
+    assert "Redaction preview: redaction is disabled (redaction.enabled: false)" in result.stdout
+
+
+def test_no_preview_on_failure_or_in_json_mode(runner: CliRunner, project: Path) -> None:
+    json_run = runner.invoke(app, ["validate", "findings.yaml", "--format", "json"])
+    assert "Redaction preview" not in json_run.output
+    _edit(project, "  - id: PT-001", "  - id: bad")
+    assert "Redaction preview" not in runner.invoke(app, ["validate", "findings.yaml"]).output

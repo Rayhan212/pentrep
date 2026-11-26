@@ -243,18 +243,21 @@ it as JPEG).
 
 ## E304 — Invalid custom redaction regex, or invalid pattern name
 
-A `redaction.custom_patterns` entry has a `regex` that does not compile, or a `name` that doesn't match
-`^[A-Z][A-Z0-9_]{1,31}$` or clashes with a built-in pattern name. This check arrives with redaction
-(milestone M4).
+A `redaction.custom_patterns` entry has a `regex` that doesn't compile with Python's `re` module, or a
+`name` that doesn't match `^[A-Z][A-Z0-9_]{1,31}$` or that is already used by a built-in pattern
+(`PRIVATE_KEY`, `JWT`, `BEARER`, `COOKIE`, `AWS_KEY`, `SECRET`, `CARD`, `EMAIL`, `PRIVATE_IP`).
 
 **Example**
 
 ```text
-findings.yaml:42:14: error[E304] redaction.custom_patterns[0].regex: invalid regex: missing ), unterminated subpattern at position 0
+e304_bad_regex.yaml:20:14: error[E304] redaction.custom_patterns[0].regex: invalid regex: missing ), unterminated subpattern at position 5
+  hint: use Python re syntax; a (?P<value>...) group redacts only that part
+e304_bad_name.yaml:21:13: error[E304] redaction.custom_patterns[1].name: pattern name 'EMAIL' is already used by a built-in pattern
+  hint: choose another name, for example ACME_EMAIL
 ```
 
-**Fix** — Correct the regular expression (Python `re` syntax), or rename the pattern, for example
-`ACME_EMPLOYEE_ID`.
+**Fix** — Correct the regular expression, quoting it with single quotes in YAML so that backslashes are
+kept. Rename the pattern to upper case with underscores, for example `ACME_EMPLOYEE_ID`.
 
 ## W101 — Placeholder text found
 

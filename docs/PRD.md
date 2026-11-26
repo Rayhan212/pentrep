@@ -120,6 +120,10 @@ The executable is `pentrep`. It is also runnable as `python -m pentrep`.
 - Exits with code 0 if there are no errors (warnings allowed), or 1 otherwise. `--strict` treats warnings as errors.
 - `--format json` prints a JSON array of diagnostics (`code`, `severity`, `path`, `line`, `column`, `message`, `hint`) to stdout, for CI and editor integration.
 - On success in text mode it prints: `✓ findings.yaml is valid: 2 findings (1 critical, 1 medium), 0 warnings`.
+- On success in text mode it then prints a redaction preview computed with the file's redaction settings, for example
+  `Redaction preview: 6 values in 2 findings would be redacted: SECRET×1, COOKIE×1, JWT×1, EMAIL×1, ACME_EMPLOYEE_ID×1, PRIVATE_IP×1`,
+  followed by the FR-35 image note when image evidence exists. It shows only pattern names and counts, never the values. With
+  `redaction.enabled: false` it prints `Redaction preview: redaction is disabled (redaction.enabled: false)`.
 
 **FR-03 — `pentrep build FILE [options]`**
 

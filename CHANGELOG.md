@@ -21,3 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   severity bands. Checked against FIRST's published CVSS v3.1 examples and with property-based tests.
 - `Finding.cvss` computed field; `stats` module with finding order, severity counts and overall risk.
 - `validate` success line shows the severity breakdown, e.g. `2 findings (1 critical, 1 medium)`.
+- Redaction engine (`pentrep.redact`): 9 built-in patterns (PRIVATE_KEY, JWT, BEARER, COOKIE, AWS_KEY,
+  SECRET, CARD with Luhn, EMAIL, PRIVATE_IP), with priority/overlap rules, custom patterns with optional
+  `value` groups (E304 for a bad name or regex), and an allowlist. Output is deterministic.
+- `validate` prints a redaction preview with counts per pattern (never the values).

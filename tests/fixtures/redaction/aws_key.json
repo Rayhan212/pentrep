@@ -1,0 +1,32 @@
+{
+  "_comment": "AKIAIOSFODNN7EXAMPLE is AWS's documented example key, not a real credential.",
+  "positive": [
+    {
+      "text": "AKIAIOSFODNN7EXAMPLE",
+      "expected": "[REDACTED:AWS_KEY]"
+    },
+    {
+      "text": "aws_access_key_id = AKIAIOSFODNN7EXAMPLE",
+      "expected": "aws_access_key_id = [REDACTED:AWS_KEY]"
+    },
+    {
+      "text": "{\"AccessKeyId\": \"ASIAY34FZKBOKMUTVV7A\"}",
+      "expected": "{\"AccessKeyId\": \"[REDACTED:AWS_KEY]\"}"
+    },
+    {
+      "text": "https://bucket.s3.example.test/f?X-Amz-Credential=AKIA0123456789ABCDEF/20261126",
+      "expected": "https://bucket.s3.example.test/f?X-Amz-Credential=[REDACTED:AWS_KEY]/20261126"
+    },
+    {
+      "text": "keys: AKIAAAAAAAAAAAAAAAAA, ASIABBBBBBBBBBBBBBBB",
+      "expected": "keys: [REDACTED:AWS_KEY], [REDACTED:AWS_KEY]"
+    }
+  ],
+  "negative": [
+    "AKIA1234 is too short",
+    "akiaiosfodnn7example in lower case",
+    "AKIAIOSFODNN7EXAMPLEX has 21 characters",
+    "XAKIAIOSFODNN7EXAMPLE has a prefix",
+    "BKIAIOSFODNN7EXAMPLE uses another prefix"
+  ]
+}

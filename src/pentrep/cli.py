@@ -17,6 +17,7 @@ from pentrep import __version__
 from pentrep.diagnostics import ExitCode, format_json, format_text
 from pentrep.loader import load_report
 from pentrep.models import json_schema
+from pentrep.redact import format_summary, redact_report
 from pentrep.stats import breakdown, compute_stats
 
 
@@ -146,6 +147,10 @@ def validate(
             if report_findings:
                 findings += f" ({breakdown(compute_stats(report_findings))})"
             typer.echo(f"✓ {name} is valid: {findings}, {_count(warnings, 'warning')}")
+            if result.report is not None:
+                _, redaction = redact_report(result.report)
+                for line in format_summary(redaction, preview=True):
+                    typer.echo(line)
     if failed:
         raise typer.Exit(ExitCode.VALIDATION_FAILED)
 

@@ -110,6 +110,8 @@ Runnable at the end: `pentrep init`, then `pentrep validate` with file:line:col 
   > note: (2026-11-26): passed locally: 346 tests, 98.94 % coverage. `init` and `validate` exit 0 with
   > "2 findings, 0 warnings"; the e101 fixture exits 1 and shows file:line:col plus "did you mean"; `schema`
   > exits 0. CI has not run yet because the branch is not pushed.
+  > note (2026-11-26, later): CI run 45743559897 on `m3-cvss` (which includes M2) is green, 13/13 jobs.
+  > The first run failed only because three `--help` tests did not strip ANSI colour (fixed in 5885dc1).
 
 ## M3 — CVSS 3.1 calculator
 Runnable at the end: `pentrep validate` scores each finding and prints the severity breakdown; invalid vectors produce E2xx errors with hints.
@@ -156,29 +158,63 @@ Runnable at the end: `pentrep validate` scores each finding and prints the sever
   > note: (2026-11-26): passed locally. `cvss.py` has 100 % line and branch coverage (149 CVSS tests);
   > the full suite is 539 tests at 98.9 % overall coverage. `validate examples/findings.yaml` prints
   > "2 findings (1 critical, 1 medium), 0 warnings". CI has not run yet because the branch is not pushed.
+  > note (2026-11-26, later): CI run 45743559897 is green, 13/13 jobs.
 
 ## M4 — PII redaction
 Runnable at the end: `pentrep validate` checks redaction config (E304) and prints a redaction preview summary.
 
-- [ ] M4.1 TDD: engine core: `Pattern` dataclass, priority and overlap resolution (each character redacted at most once), `value` group support, `[REDACTED:NAME]` token, deterministic output
+- [x] M4.1 TDD: engine core: `Pattern` dataclass, priority and overlap resolution (each character redacted at most once), `value` group support, `[REDACTED:NAME]` token, deterministic output
   files: `src/pentrep/redact.py`, `tests/unit/test_redact.py`
-- [ ] M4.2 TDD: built-in patterns `PRIVATE_KEY`, `JWT`, `BEARER`, `COOKIE` (keeping cookie names and attributes), each with a positive and a negative corpus of ≥ 5 samples
+  > note: a `Pattern` can have several groups whose names start with `value` (the first one that took part
+  > is redacted; if none did, the whole match is), a `check` function, or a `finder` for rules a single regex
+  > cannot express. An allowlisted match still claims its characters, so a lower-priority pattern can't redact
+  > part of it.
+- [x] M4.2 TDD: built-in patterns `PRIVATE_KEY`, `JWT`, `BEARER`, `COOKIE` (keeping cookie names and attributes), each with a positive and a negative corpus of ≥ 5 samples
   files: `src/pentrep/redact.py`, `tests/fixtures/redaction/*`, `tests/unit/test_redact_patterns.py`
-- [ ] M4.3 TDD: built-in patterns `AWS_KEY`, `SECRET` (query, form, JSON and header forms), `CARD` (with Luhn check), with corpora
+  > note: corpora are JSON files (`tests/fixtures/redaction/<pattern>.json`) where each positive sample has
+  > its exact expected output. The private-key corpus uses a `<<PRIVATE KEY>>` placeholder that the test expands,
+  > so the `detect-private-key` hook stays enabled. An unterminated private-key block is redacted to the end of
+  > the text. COOKIE also redacts every pair on a `Cookie:` line, keeping only the listed attributes.
+- [x] M4.3 TDD: built-in patterns `AWS_KEY`, `SECRET` (query, form, JSON and header forms), `CARD` (with Luhn check), with corpora
   files: `src/pentrep/redact.py`, `tests/fixtures/redaction/*`, `tests/unit/test_redact_patterns.py`
-- [ ] M4.4 TDD: built-in patterns `EMAIL` and `PRIVATE_IP` (confirmed with `ipaddress`; public, loopback and RFC 5737 ranges are kept), with corpora
+  > note: SECRET has three value forms: double-quoted, single-quoted, and bare up to `& ; , " '` or
+  > whitespace. The separator must be on the same line. `-` may come before a key (`X-Api-Key`), but `_` may not
+  > (`my_password`). CARD accepts single spaces or hyphens between digits and needs 13–19 digits plus a valid
+  > Luhn checksum.
+- [x] M4.4 TDD: built-in patterns `EMAIL` and `PRIVATE_IP` (confirmed with `ipaddress`; public, loopback and RFC 5737 ranges are kept), with corpora
   files: `src/pentrep/redact.py`, `tests/fixtures/redaction/*`, `tests/unit/test_redact_patterns.py`
-- [ ] M4.5 TDD: `Redaction` config model (`enabled`, `apply_to_all_text`, `custom_patterns` ≤ 50, `allowlist` ≤ 200); E304 for a bad regex or name; custom patterns run after built-ins; allowlisted values are skipped and not counted
+  > note: PRIVATE_IP matches dotted quads with boundaries (so `10.2.3.4.5` is skipped) and keeps only
+  > addresses that `ipaddress` places in 10/8, 172.16/12, 192.168/16 or 169.254/16. All 9 built-ins now have a
+  > corpus, and a test checks that there is exactly one corpus per built-in.
+- [x] M4.5 TDD: `Redaction` config model (`enabled`, `apply_to_all_text`, `custom_patterns` ≤ 50, `allowlist` ≤ 200); E304 for a bad regex or name; custom patterns run after built-ins; allowlisted values are skipped and not counted
   files: `src/pentrep/models.py`, `src/pentrep/redact.py`, `tests/unit/test_redact.py`, `tests/fixtures/invalid/e304_*`
-- [ ] M4.6 TDD: `redact_report(report) -> (report, RedactionSummary)` over the fields in FR-30, counting image evidence items that were not scanned
+  > note: E304 is raised by validators on `CustomPattern` (name: pattern, or a clash with a built-in name;
+  > regex: `re.compile`), located at the field. Custom patterns get priority 100+ (after all built-ins).
+  > `Redactor(config)` bundles the patterns and the allowlist. Every code now has an invalid fixture.
+- [x] M4.6 TDD: `redact_report(report) -> (report, RedactionSummary)` over the fields in FR-30, counting image evidence items that were not scanned
   files: `src/pentrep/redact.py`, `tests/unit/test_redact.py`
-- [ ] M4.7 TDD: summary formatter (FR-35; never prints original values) and a `validate` "Redaction preview: …" line. Also update PRD FR-02 to describe this line
+  > note: counts are kept in order of first appearance, scanning findings in file order and fields in report
+  > order (description, impact, steps, evidence, remediation). That gives the PRD example order SECRET, COOKIE, JWT,
+  > EMAIL, ACME_EMPLOYEE_ID, PRIVATE_IP. An `enabled` argument overrides the config for `--no-redact` (M5).
+- [x] M4.7 TDD: summary formatter (FR-35; never prints original values) and a `validate` "Redaction preview: …" line. Also update PRD FR-02 to describe this line
   files: `src/pentrep/redact.py`, `src/pentrep/cli.py`, `tests/cli/test_validate.py`, `docs/PRD.md`
-- [ ] M4.8 Test the PRD §4.2.3 example: the redacted PT-001 and PT-002 evidence equals the expected text in the PRD exactly
+  > note: the preview goes to stdout after the `✓` line, in text mode only and only when the file is
+  > valid. PRD FR-02 now describes it. The ruff config allows `×` as a confusable character (`allowed-confusables`),
+  > because FR-35 prescribes it; RUF001 stays on for everything else.
+- [x] M4.8 Test the PRD §4.2.3 example: the redacted PT-001 and PT-002 evidence equals the expected text in the PRD exactly
   files: `tests/unit/test_redact_example.py`
-- [ ] M4.9 Leak-test harness: fixture `valid/leaky.yaml` seeding 20 unique secrets, plus helper `assert_no_leaks(texts)`; apply it now to `validate` stdout/stderr and the `--debug` log
+  > note: a test-only task: it passed on the first run. The expected lines are read from the PRD itself, and
+  > the test also checks that only those three lines of the PT-001 evidence change.
+- [x] M4.9 Leak-test harness: fixture `valid/leaky.yaml` seeding 20 unique secrets, plus helper `assert_no_leaks(texts)`; apply it now to `validate` stdout/stderr and the `--debug` log
   files: `tests/fixtures/valid/leaky.yaml`, `tests/conftest.py`, `tests/security/test_leaks.py`
-- [ ] M4.10 verify: `uv run pytest --cov=pentrep.redact --cov-branch --cov-fail-under=95 tests/unit/test_redact*.py tests/security && uv run pentrep validate examples/findings.yaml` (prints "Redaction preview: 6 values … SECRET×1, COOKIE×1, JWT×1, EMAIL×1, ACME_EMPLOYEE_ID×1, PRIVATE_IP×1")
+  > note: `leaky.yaml` writes its private key with a `<<PRIVATE KEY>>` placeholder, which the `leaky_project`
+  > fixture expands. `assert_no_leaks` is also available as the `no_leaks` fixture. The tests cover `validate` in
+  > text, `--strict`, JSON and `--debug` mode, plus the diagnostics of an invalid leaky file. The preview counts 22
+  > values: 20 unique secrets, two of which occur twice.
+- [x] M4.10 verify: `uv run pytest --cov=pentrep.redact --cov-branch --cov-fail-under=95 tests/unit/test_redact*.py tests/security && uv run pentrep validate examples/findings.yaml` (prints "Redaction preview: 6 values … SECRET×1, COOKIE×1, JWT×1, EMAIL×1, ACME_EMPLOYEE_ID×1, PRIVATE_IP×1")
+  > note: (2026-11-26): passed locally. `redact.py` has 100 % line and branch coverage (231 tests in the
+  > verify subset); the full suite is 741 tests at 99 % overall coverage. `validate examples/findings.yaml` prints the
+  > expected preview line. CI runs after the push.
 
 ## M5 — HTML & Markdown renderer (`classic` theme)
 Runnable at the end: `pentrep build examples/findings.yaml -f html -f md` produces a redacted, self-contained report.

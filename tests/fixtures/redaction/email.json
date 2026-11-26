@@ -1,0 +1,31 @@
+{
+  "positive": [
+    {
+      "text": "admin@acme.example",
+      "expected": "[REDACTED:EMAIL]"
+    },
+    {
+      "text": "Contact: Jane.Doe+test@mail.example.co.uk today",
+      "expected": "Contact: [REDACTED:EMAIL] today"
+    },
+    {
+      "text": "{\"email\":\"admin@acme.example\"}",
+      "expected": "{\"email\":\"[REDACTED:EMAIL]\"}"
+    },
+    {
+      "text": "<a href=\"mailto:sec_team@example.test\">",
+      "expected": "<a href=\"mailto:[REDACTED:EMAIL]\">"
+    },
+    {
+      "text": "cc: a.b@x-y.example, c%d@example.test",
+      "expected": "cc: [REDACTED:EMAIL], [REDACTED:EMAIL]"
+    }
+  ],
+  "negative": [
+    "root@localhost has no top-level domain",
+    "@example.test is a handle, not an address",
+    "admin@ is missing a domain",
+    "npm i @scope/pkg@1.2.3",
+    "a@b.c has a one-letter TLD"
+  ]
+}

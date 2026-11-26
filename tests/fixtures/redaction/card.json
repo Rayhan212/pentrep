@@ -1,0 +1,32 @@
+{
+  "positive": [
+    {
+      "text": "4111 1111 1111 1111",
+      "expected": "[REDACTED:CARD]"
+    },
+    {
+      "text": "card: 4111-1111-1111-1111 exp 12/29",
+      "expected": "card: [REDACTED:CARD] exp 12/29"
+    },
+    {
+      "text": "{\"pan\":\"5555555555554444\"}",
+      "expected": "{\"pan\":\"[REDACTED:CARD]\"}"
+    },
+    {
+      "text": "amex 378282246310005.",
+      "expected": "amex [REDACTED:CARD]."
+    },
+    {
+      "text": "visa13=4222222222222 and 6011 0009 9013 9424",
+      "expected": "visa13=[REDACTED:CARD] and [REDACTED:CARD]"
+    }
+  ],
+  "negative": [
+    "4111 1111 1111 1112",
+    "order 123456789012 is 12 digits",
+    "call +1 555 123 4567",
+    "ids 12345678901234567890 is 20 digits",
+    "build 2026-11-26-1234-5678",
+    "4111111111111112 fails Luhn"
+  ]
+}

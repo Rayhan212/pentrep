@@ -55,14 +55,14 @@ An **asset** is `{ asset: str, type: url | ip | cidr | hostname | api | mobile_a
 
 ## `redaction`
 
-Redaction is on by default. These keys are checked for structure now. The patterns themselves are checked
-and applied from milestone M4.
+Redaction is on by default. See [errors.md](errors.md#e304--invalid-custom-redaction-regex-or-invalid-pattern-name)
+for pattern-name and regex rules.
 
 | Key | Type | Required | Constraints / default |
 |---|---|---|---|
 | `enabled` | bool | no | `true` |
 | `apply_to_all_text` | bool | no | `false` |
-| `custom_patterns` | list | no | ≤ 50 items of `{ name, regex }` |
+| `custom_patterns` | list | no | ≤ 50 items of `{ name, regex }`. `name`: `^[A-Z][A-Z0-9_]{1,31}$`, not a built-in name. `regex`: Python `re`; a `(?P<value>…)` group redacts only that part. Run after the built-in patterns (E304) |
 | `allowlist` | list[str] | no | ≤ 200 exact strings that are never redacted |
 
 ## `findings`

@@ -1,0 +1,31 @@
+{
+  "positive": [
+    {
+      "text": "Set-Cookie: session=9f8e7d6c5b4a3921; Path=/; HttpOnly; Secure",
+      "expected": "Set-Cookie: session=[REDACTED:COOKIE]; Path=/; HttpOnly; Secure"
+    },
+    {
+      "text": "Cookie: sid=abc123; theme=dark; csrftoken=Zx9",
+      "expected": "Cookie: sid=[REDACTED:COOKIE]; theme=[REDACTED:COOKIE]; csrftoken=[REDACTED:COOKIE]"
+    },
+    {
+      "text": "set-cookie: id=a3fWa; Expires=Thu, 21 Oct 2027 07:28:00 GMT; Max-Age=2592000; Domain=example.test; SameSite=Lax",
+      "expected": "set-cookie: id=[REDACTED:COOKIE]; Expires=Thu, 21 Oct 2027 07:28:00 GMT; Max-Age=2592000; Domain=example.test; SameSite=Lax"
+    },
+    {
+      "text": "HTTP/1.1 302 Found\nLocation: /home\nSet-Cookie: auth=\"q1w2e3\"; secure\n\n<html></html>",
+      "expected": "HTTP/1.1 302 Found\nLocation: /home\nSet-Cookie: auth=[REDACTED:COOKIE]; secure\n\n<html></html>"
+    },
+    {
+      "text": "  Cookie:a=1;b=2",
+      "expected": "  Cookie:a=[REDACTED:COOKIE];b=[REDACTED:COOKIE]"
+    }
+  ],
+  "negative": [
+    "The session cookie has no HttpOnly flag.",
+    "Set-Cookie: Path=/; HttpOnly; Secure",
+    "X-Cookie-Note: session=abc should not match: header name is not Cookie",
+    "cookies are set with document.cookie = value",
+    "Cookie: "
+  ]
+}

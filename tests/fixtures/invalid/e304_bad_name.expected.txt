@@ -1,0 +1,5 @@
+e304_bad_name.yaml:19:13: error[E304] redaction.custom_patterns[0].name: invalid pattern name 'acme-id'
+  hint: names match ^[A-Z][A-Z0-9_]{1,31}$, for example ACME_EMPLOYEE_ID
+e304_bad_name.yaml:21:13: error[E304] redaction.custom_patterns[1].name: pattern name 'EMAIL' is already used by a built-in pattern
+  hint: choose another name, for example ACME_EMAIL
+✗ e304_bad_name.yaml is invalid: 2 errors, 0 warnings
