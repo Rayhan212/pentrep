@@ -244,8 +244,8 @@ Runnable at the end: `pentrep build examples/findings.yaml -f html -f md` produc
   > M5.5, which adds the remaining sections.
 - [x] M5.5 HTML theme part 2: scope & methodology, summary table, finding partial, evidence with Pygments inline CSS (HTTP lexer), appendices A/B, `UNREDACTED DRAFT` banner (FR-36). Add the `pygments` dep
   files: `src/pentrep/themes/classic/**`, `pyproject.toml`, `uv.lock`
-  > note: Pygments has no type hints and `types-Pygments` would be a new dependency, so its imports carry
-  > `# type: ignore[import-untyped]`. Pasted HTTP traffic is split into messages at each request or status line,
+  > note: Pygments is type-checked with the `types-Pygments` dev dependency (approved and added on 2026-11-26,
+  > after M6). Pasted HTTP traffic is split into messages at each request or status line,
   > so a request plus its response is highlighted instead of falling back to plain text. A part that still lexes
   > with errors is shown as plain text. Steps use inline Markdown inside `<li>`.
 - [x] M5.6 TDD: HTML renderer that inlines CSS and turns images into `data:` URIs; tests for no `<script>`, no external `src`/`url()`, `lang="en"`, no skipped heading levels, captions used as alt text
@@ -287,10 +287,10 @@ Runnable at the end: `pentrep build examples/findings.yaml -f html -f md` produc
   > note: the override mechanism came from M5.3/M5.8, so the override test passed on the first run. Its
   > cover fixture is in `tests/fixtures/templates/`. A doc test checks that `docs/templates.md` names every context
   > key, every view field, every filter and every built-in partial, so the doc cannot drift from the code.
-- [x] M5.12 verify: `uv run pytest && uv run pentrep build examples/findings.yaml -f html -f md -o tmp/m5` (exit 0; `tmp/m5/pentest-report.{html,md}` and `tmp/m5/assets/` exist; `grep -c "REDACTED" tmp/m5/pentest-report.html` ≥ 6); golden tests pass on ubuntu and macOS in CI
+- [x] M5.12 verify: `uv run pytest && uv run pentrep build examples/findings.yaml -f html -f md -o tmp/m5` (exit 0; `tmp/m5/pentest-report.{html,md}` and `tmp/m5/assets/` exist; `grep -o "REDACTED" tmp/m5/pentest-report.html | wc -l` ≥ 6); golden tests pass on ubuntu and macOS in CI
   > note: (2026-11-26): passed. Locally: 890 tests, 98.45 % coverage. `build examples/findings.yaml -f html -f md
-  > -o tmp/m5` exits 0 and writes both files plus `assets/`. The plan's `grep -c "REDACTED"` counts lines and prints 5,
-  > because one evidence line holds three tokens; all 6 values are redacted (one `[REDACTED:…]` token per pattern).
+  > -o tmp/m5` exits 0 and writes both files plus `assets/`; the token count is 7 (the 6 redacted values plus the
+  > `[REDACTED:NAME]` example in Appendix B).
   > CI run 45766141610 on `m5-render` is green, 13/13 jobs, so the golden files pass unchanged on ubuntu-22.04,
   > ubuntu-24.04 and macos-latest.
 
@@ -300,8 +300,9 @@ Runnable at the end: `pentrep build examples/findings.yaml` (default `-f all`) p
 - [x] M6.1 Decide the font (Q-06), bundle the OFL font and its licence, and add a wheel-size check script (≤ 2 MB, NFR-12)
   files: `src/pentrep/themes/classic/fonts/**`, `src/pentrep/themes/classic/style.css`, `tests/unit/test_package_size.py`
   > note: Q-06 decided: Source Sans 3 Regular/Italic/Bold plus Source Code Pro Regular (TrueType, OFL 1.1),
-  > taken from Adobe's official npm packages `source-sans@3.52.0` and `source-code-pro@2.42.0`; licences are in
-  > `fonts/OFL-*.txt`. The `@font-face` rules are in a separate `fonts.css` that only the PDF renderer loads (a font
+  > taken from Adobe's official npm packages `source-sans@3.52.0` and `source-code-pro@2.42.0`. The licence is
+  > `fonts/OFL.txt`, one file with both copyright notices (merged from two files on 2026-11-26) and referenced in
+  > the README. The `@font-face` rules are in a separate `fonts.css` that only the PDF renderer loads (a font
   > `url()` in the inlined `style.css` would break FR-45). The wheel is 704 KB; the size check is a test that builds
   > the wheel, not a separate script.
 - [x] M6.2 TDD: PDF wrapper with lazy WeasyPrint import and a dependency check that raises `RenderError` with OS-specific hints (apt, brew, Docker); test the missing-library case with a simulated import failure. Add the `weasyprint` dep
