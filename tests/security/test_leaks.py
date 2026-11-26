@@ -70,3 +70,28 @@ def test_diagnostics_of_an_invalid_leaky_file_have_no_leaks(
     assert result.exit_code == 1
     assert "error[E103]" in result.stderr
     no_leaks([result.stdout, result.stderr])
+
+
+@pytest.mark.parametrize("debug", [[], ["--debug"]])
+def test_built_reports_and_output_have_no_leaks(
+    runner: CliRunner, leaky_project: Path, no_leaks: Leak, debug: list[str]
+) -> None:
+    out = leaky_project.parent / "out"
+    result = runner.invoke(
+        app, [*debug, "build", str(leaky_project), "-f", "html", "-f", "md", "-o", str(out)]
+    )
+    assert result.exit_code == 0, result.output
+    files = [p.read_text("utf-8") for p in sorted(out.glob("*.*"))]
+    assert len(files) == 2
+    no_leaks([*files, result.stdout, result.stderr])
+    assert "Redacted 22 values in 2 findings" in result.stdout
+
+
+def test_no_redact_really_contains_the_secrets(
+    runner: CliRunner, leaky_project: Path, leaky_secrets: tuple[str, ...]
+) -> None:
+    """Sanity check for the harness: without redaction the secrets do reach the output."""
+    out = leaky_project.parent / "out"
+    runner.invoke(app, ["build", str(leaky_project), "-f", "md", "-o", str(out), "--no-redact"])
+    md = (out / "pentest-report.md").read_text("utf-8")
+    assert sum(secret in md for secret in leaky_secrets) >= 18

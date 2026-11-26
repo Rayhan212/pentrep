@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import os
+import re
+import shutil
 import time
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
+from pentrep.cli import app
 from pentrep.diagnostics import ErrorCode
 from pentrep.loader import IMAGE_MAX_BYTES, LOGO_MAX_BYTES, ValidationResult, load_report
 
@@ -235,3 +239,87 @@ def test_dot_dot_paths_escaping_the_project_are_e302(project: Path, ref: str) ->
 
 def test_dot_dot_path_staying_inside_is_allowed(project: Path) -> None:
     assert _check(project, image="assets/../evidence/shot.png")[0] == []
+
+
+# --- Rendered output (M5.10, NFR-09, NFR-10) ---------------------------------------------------
+
+FULL_FIXTURE = Path(__file__).parent.parent / "fixtures" / "valid"
+
+
+@pytest.fixture
+def hostile_project(tmp_path: Path) -> Path:
+    """The full example with XSS, template syntax and a javascript: link in user fields."""
+    shutil.copytree(FULL_FIXTURE, tmp_path, dirs_exist_ok=True)
+    text = (FULL_FIXTURE / "full.yaml").read_text("utf-8")
+    replacements = {
+        'title: "SQL Injection in Login Endpoint"': (
+            'title: "SQLi {{ 7*7 }} {% if 1 %}X{% endif %}"'
+        ),
+        "      The `username` field": (
+            "      <script>alert('desc')</script> <img src=x onerror=alert(1)>\n"
+            "      [click me](javascript:alert(document.cookie)) and {{ config }}.\n"
+            "      The `username` field"
+        ),
+        'company_name: "Example Security Labs"': 'company_name: "Labs <b>{{ 7*7 }}</b>"',
+    }
+    for old, new in replacements.items():
+        assert old in text, old
+        text = text.replace(old, new)
+    (tmp_path / "findings.yaml").write_text(text, "utf-8")
+    return tmp_path
+
+
+def _build_outputs(project: Path) -> tuple[str, str]:
+    result = CliRunner().invoke(
+        app,
+        [
+            "build",
+            str(project / "findings.yaml"),
+            "-f",
+            "html",
+            "-f",
+            "md",
+            "-o",
+            str(project / "out"),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    html = (project / "out" / "pentest-report.html").read_text("utf-8")
+    md = (project / "out" / "pentest-report.md").read_text("utf-8")
+    return html, md
+
+
+def test_xss_in_description_is_escaped(hostile_project: Path) -> None:
+    html, md = _build_outputs(hostile_project)
+    assert "<script>" not in html
+    assert "<img src=x" not in html
+    assert "&lt;script&gt;alert('desc')&lt;/script&gt;" in html
+    assert "<script>" not in md
+    assert "&lt;script>alert('desc')&lt;/script>" in md
+
+
+def test_template_syntax_in_values_is_rendered_literally(hostile_project: Path) -> None:
+    html, md = _build_outputs(hostile_project)
+    assert "SQLi {{ 7*7 }} {% if 1 %}X{% endif %}" in html
+    assert "SQLi 49" not in html  # {{ 7*7 }} was not evaluated
+    assert "Labs <b>49" not in html
+    assert "{{ config }}" in html
+    assert "Labs &lt;b&gt;{{ 7*7 }}&lt;/b&gt;" in html
+    assert "SQLi {{ 7\\*7 }} {% if 1 %}X{% endif %}" in md
+
+
+def test_javascript_link_is_neutralised(hostile_project: Path) -> None:
+    html, md = _build_outputs(hostile_project)
+    # The rejected link is shown as plain text, never as a clickable href.
+    assert not re.search(r"href\s*=\s*[\"']?\s*javascript:", html, flags=re.IGNORECASE)
+    assert "[click me](javascript:alert(document.cookie))" in html
+    assert "[click me\\](javascript:" in md  # Markdown: the link syntax is broken on purpose
+
+
+def test_build_makes_no_network_connections(hostile_project: Path, socket_disabled: None) -> None:
+    import socket
+
+    with pytest.warns(UserWarning), pytest.raises(Exception, match="tried to use socket"):
+        socket.socket()  # the guard is active
+    html, _ = _build_outputs(hostile_project)  # any connection attempt would raise
+    assert "<!DOCTYPE html>" in html

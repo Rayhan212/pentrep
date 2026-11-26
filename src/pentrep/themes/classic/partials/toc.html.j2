@@ -1,0 +1,19 @@
+{% from "partials/macros.html.j2" import draft_banner %}
+<section id="table-of-contents">
+<h2>Table of contents</h2>
+{{ draft_banner(redaction) }}
+<ol class="toc">
+<li><a href="#executive-summary">Executive summary</a></li>
+<li><a href="#scope-and-methodology">Scope and methodology</a></li>
+<li><a href="#findings-summary">Findings summary</a></li>
+<li><a href="#detailed-findings">Detailed findings</a>
+<ol>
+{% for finding in findings %}
+<li><a href="#{{ finding.anchor }}">{{ finding.id }}: {{ finding.title }}</a></li>
+{% endfor %}
+</ol>
+</li>
+<li><a href="#appendix-a">Appendix A: CVSS 3.1 severity scale</a></li>
+<li><a href="#appendix-b">Appendix B: Redaction</a></li>
+</ol>
+</section>

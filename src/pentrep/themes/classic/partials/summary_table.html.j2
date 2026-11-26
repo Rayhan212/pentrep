@@ -1,0 +1,13 @@
+{% from "partials/macros.html.j2" import draft_banner, badge %}
+<section id="findings-summary">
+<h2>Findings summary</h2>
+{{ draft_banner(redaction) }}
+<table>
+<thead><tr><th scope="col">ID</th><th scope="col">Title</th><th scope="col">Severity</th><th scope="col">Score</th><th scope="col">Status</th></tr></thead>
+<tbody>
+{% for finding in findings %}
+<tr><td><a href="#{{ finding.anchor }}">{{ finding.id }}</a></td><td>{{ finding.title }}</td><td>{{ badge(finding.severity) }}</td><td>{{ finding.score_text }}</td><td>{{ finding.status_label }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</section>

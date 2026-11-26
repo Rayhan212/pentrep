@@ -215,32 +215,78 @@ Runnable at the end: `pentrep validate` checks redaction config (E304) and print
   > note: (2026-11-26): passed locally. `redact.py` has 100 % line and branch coverage (231 tests in the
   > verify subset); the full suite is 741 tests at 99 % overall coverage. `validate examples/findings.yaml` prints the
   > expected preview line. CI runs after the push.
+  > note (2026-11-26, later): CI run 45744658677 on `m4-redaction` is green, 13/13 jobs.
 
 ## M5 — HTML & Markdown renderer (`classic` theme)
 Runnable at the end: `pentrep build examples/findings.yaml -f html -f md` produces a redacted, self-contained report.
 
-- [ ] M5.1 TDD: Markdown helper using markdown-it-py with `html=False`, GFM tables, and `javascript:`/`data:` links neutralised. Add the `markdown-it-py` dep
+- [x] M5.1 TDD: Markdown helper using markdown-it-py with `html=False`, GFM tables, and `javascript:`/`data:` links neutralised. Add the `markdown-it-py` dep
   files: `src/pentrep/render/markdown.py`, `tests/render/test_markdown_helper.py`, `pyproject.toml`, `uv.lock`
-- [ ] M5.2 TDD: template context builder (`engagement`, `branding`, sorted `findings`, `stats`, `redaction`, `generated_at`, `pentrep_version`)
+  > note: links are allowed only for http, https and mailto (anything else is shown as text). Markdown images
+  > are not rendered, so user Markdown can never add an external `src` (FR-45). Headings in user Markdown become
+  > bold paragraphs, so they cannot break the report's h1→h2→h3 structure.
+- [x] M5.2 TDD: template context builder (`engagement`, `branding`, sorted `findings`, `stats`, `redaction`, `generated_at`, `pentrep_version`)
   files: `src/pentrep/render/context.py`, `tests/render/test_context.py`
-- [ ] M5.3 TDD: Jinja environment with a `ChoiceLoader` (`--template-dir` first, then the built-in theme), autoescape for HTML and `StrictUndefined`. Add the `jinja2` dep
+  > note: the context holds view objects (`FindingView`, `EvidenceView`, `BrandingView`, `RedactionView`) with
+  > display values precomputed (badge class, score text, canonical vector, sub-scores, CWE links, image asset
+  > names and MIME types). `generated_at` is `SOURCE_DATE_EPOCH` as UTC when set, else the report date, so the
+  > output stays deterministic. The four FR-43 combinations are tested.
+- [x] M5.3 TDD: Jinja environment with a `ChoiceLoader` (`--template-dir` first, then the built-in theme), autoescape for HTML and `StrictUndefined`. Add the `jinja2` dep
   files: `src/pentrep/render/__init__.py`, `tests/render/test_env.py`, `pyproject.toml`, `uv.lock`
-- [ ] M5.4 HTML theme part 1: `report.html.j2`, partials for cover, document control, TOC and executive summary with the stats table; `style.css` with the accent colour variable and severity palette; contrast test (FR-44)
+  > note: the built-in theme is loaded with `PackageLoader("pentrep", "themes/classic")`. `style.css` also goes
+  > through the loader, so it can be overridden too. A missing `--template-dir` raises `NotADirectoryError`, which
+  > the CLI reports as a usage error in M5.8.
+- [x] M5.4 HTML theme part 1: `report.html.j2`, partials for cover, document control, TOC and executive summary with the stats table; `style.css` with the accent colour variable and severity palette; contrast test (FR-44)
   files: `src/pentrep/themes/classic/**`, `tests/render/test_theme.py`
-- [ ] M5.5 HTML theme part 2: scope & methodology, summary table, finding partial, evidence with Pygments inline CSS (HTTP lexer), appendices A/B, `UNREDACTED DRAFT` banner (FR-36). Add the `pygments` dep
+  > note: a basic `render_html` was written here so the theme could be tested; its own checks (FR-45) are in
+  > M5.6. Badge text colours: white on Critical/High/Low/Informational and black on Medium, because white on
+  > #E65100 is only 3.8:1. The contrast test computes WCAG ratios from `style.css`. The FR-40 order test moved to
+  > M5.5, which adds the remaining sections.
+- [x] M5.5 HTML theme part 2: scope & methodology, summary table, finding partial, evidence with Pygments inline CSS (HTTP lexer), appendices A/B, `UNREDACTED DRAFT` banner (FR-36). Add the `pygments` dep
   files: `src/pentrep/themes/classic/**`, `pyproject.toml`, `uv.lock`
-- [ ] M5.6 TDD: HTML renderer that inlines CSS and turns images into `data:` URIs; tests for no `<script>`, no external `src`/`url()`, `lang="en"`, no skipped heading levels, captions used as alt text
+  > note: Pygments has no type hints and `types-Pygments` would be a new dependency, so its imports carry
+  > `# type: ignore[import-untyped]`. Pasted HTTP traffic is split into messages at each request or status line,
+  > so a request plus its response is highlighted instead of falling back to plain text. A part that still lexes
+  > with errors is shown as plain text. Steps use inline Markdown inside `<li>`.
+- [x] M5.6 TDD: HTML renderer that inlines CSS and turns images into `data:` URIs; tests for no `<script>`, no external `src`/`url()`, `lang="en"`, no skipped heading levels, captions used as alt text
   files: `src/pentrep/render/html.py`, `tests/render/test_html.py`
-- [ ] M5.7 TDD: Markdown report with `report.md.j2`, images copied to `assets/<id>-<n>.<ext>`, automatic fence length, GFM tables, text severity badges
+  > note: the renderer itself was written in M5.4, so these FR-45 tests passed on the first run. A mutation
+  > check (the finding title changed from `h3` to `h4`, which skips a level after `h2`) makes the heading test fail. The tests parse the output with `html.parser`:
+  > every `src` must be a `data:` URI, `href` may only appear on `<a>`, and there must be no `<link>`, `url()`
+  > or `@import`, no `on*` attributes and no `<script>`.
+- [x] M5.7 TDD: Markdown report with `report.md.j2`, images copied to `assets/<id>-<n>.<ext>`, automatic fence length, GFM tables, text severity badges
   files: `src/pentrep/themes/classic/report.md.j2`, `src/pentrep/render/md.py`, `tests/render/test_md.py`
-- [ ] M5.8 TDD: `pentrep build` for html/md (FR-03): `-f`, `-o`, `-n`, `--template-dir`, `--no-redact`, `--strict`, `-q`; validation runs first; prints written paths, sizes and the redaction summary
+  > note: `render_md` returns the text and a list of images to copy (`assets/<finding-id>-<n>.<ext>`, the
+  > logo as `assets/logo.<ext>`); the CLI copies them. Every value goes through a filter: `md_inline`/`md_cell`
+  > backslash-escape Markdown punctuation, `md_block` escapes raw HTML outside code spans and fences and turns user
+  > headings into bold lines (the report keeps one `#` title), and `md_url` percent-encodes `<`, `>`, spaces and
+  > backticks. TOC links use GitHub heading slugs. Finding subsections are bold labels, not `####`.
+- [x] M5.8 TDD: `pentrep build` for html/md (FR-03): `-f`, `-o`, `-n`, `--template-dir`, `--no-redact`, `--strict`, `-q`; validation runs first; prints written paths, sizes and the redaction summary
   files: `src/pentrep/cli.py`, `tests/cli/test_build.py`
-- [ ] M5.9 Golden files: `--update-golden` pytest option, `SOURCE_DATE_EPOCH` fixed, version string normalised; generate and review `report.html` and `report.md`
+  > note: `jinja2` and the renderers are imported inside `build`, so `--help` stays fast (NFR-04). Everything
+  > is rendered before anything is written, so a template error (exit 3) leaves no half-written report. Written
+  > paths are printed with `/` on every OS. The FR-36 warning is printed even with `-q`, because it is
+  > safety-relevant. Until M6, requesting `pdf` (including the default `all`) writes HTML and Markdown, then exits
+  > 3 with "PDF output is not implemented yet".
+- [x] M5.9 Golden files: `--update-golden` pytest option, `SOURCE_DATE_EPOCH` fixed, version string normalised; generate and review `report.html` and `report.md`
   files: `tests/conftest.py`, `tests/render/test_golden.py`, `tests/golden/report.html`, `tests/golden/report.md`
-- [ ] M5.10 Security and leak tests on output: XSS in a description, `{{ 7*7 }}` and `{% %}` in a title rendered literally, `javascript:` link neutralised, no network access (add the `pytest-socket` dev dep), `assert_no_leaks` on HTML/MD built from `leaky.yaml`
+  > note: goldens are rendered from `valid/full.yaml` with `SOURCE_DATE_EPOCH=1795176000` and the version
+  > replaced by `<PENTREP_VERSION>`; a failure shows a unified diff. Reviewing the first golden found a bug: Pygments
+  > strips and adds newlines by default, which moved the blank line between a request body and its response.
+  > Lexers now run with `stripnl=False, ensurenl=False`, and `tests/render/test_highlight.py` checks that the
+  > highlighted text equals the evidence exactly. Regenerated, reviewed diff: only that blank line.
+- [x] M5.10 Security and leak tests on output: XSS in a description, `{{ 7*7 }}` and `{% %}` in a title rendered literally, `javascript:` link neutralised, no network access (add the `pytest-socket` dev dep), `assert_no_leaks` on HTML/MD built from `leaky.yaml`
   files: `tests/security/test_hardening.py`, `tests/security/test_leaks.py`, `pyproject.toml`, `uv.lock`
-- [ ] M5.11 Template override test (override only `partials/cover.html.j2`; everything else stays golden-identical) and `docs/templates.md`
+  > note: these tests found a real gap: a `[x](javascript:…)` link reached the Markdown report as working link
+  > syntax. `md_block` now breaks inline links and reference definitions that point to `javascript:`, `vbscript:`,
+  > `data:` or `file:` (they are shown as text); HTML already rendered them as text. The no-network test uses the
+  > `socket_disabled` fixture from pytest-socket. The leak test covers HTML and MD files plus stdout/stderr, with and
+  > without `--debug`, and a sanity test confirms the secrets do appear with `--no-redact`.
+- [x] M5.11 Template override test (override only `partials/cover.html.j2`; everything else stays golden-identical) and `docs/templates.md`
   files: `tests/render/test_override.py`, `tests/fixtures/templates/**`, `docs/templates.md`
+  > note: the override mechanism came from M5.3/M5.8, so the override test passed on the first run. Its
+  > cover fixture is in `tests/fixtures/templates/`. A doc test checks that `docs/templates.md` names every context
+  > key, every view field, every filter and every built-in partial, so the doc cannot drift from the code.
 - [ ] M5.12 verify: `uv run pytest && uv run pentrep build examples/findings.yaml -f html -f md -o tmp/m5` (exit 0; `tmp/m5/pentest-report.{html,md}` and `tmp/m5/assets/` exist; `grep -c "REDACTED" tmp/m5/pentest-report.html` ≥ 6); golden tests pass on ubuntu and macOS in CI
 
 ## M6 — PDF export

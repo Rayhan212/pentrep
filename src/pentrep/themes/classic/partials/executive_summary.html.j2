@@ -1,0 +1,17 @@
+{% from "partials/macros.html.j2" import draft_banner, badge %}
+<section id="executive-summary">
+<h2>Executive summary</h2>
+{{ draft_banner(redaction) }}
+{% if engagement.executive_summary %}
+{{ engagement.executive_summary | markdown }}
+{% endif %}
+<table class="stats">
+<thead><tr><th scope="col">Severity</th><th scope="col">Findings</th></tr></thead>
+<tbody>
+{% for label, count in stats.counts.items() %}
+<tr><th scope="row">{{ label }}</th><td>{{ count }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+<p>Overall risk: {{ badge(stats.overall_risk) }}</p>
+</section>

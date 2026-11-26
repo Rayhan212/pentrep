@@ -1,0 +1,38 @@
+{% from "partials/macros.html.j2" import draft_banner %}
+<section id="appendix-a">
+<h2>Appendix A: CVSS 3.1 severity scale</h2>
+{{ draft_banner(redaction) }}
+<p>Scores are CVSS 3.1 base scores calculated from each finding's vector. Informational findings have no score.</p>
+<table>
+<thead><tr><th scope="col">Severity</th><th scope="col">Base score</th></tr></thead>
+<tbody>
+<tr><td><span class="badge badge-none">None</span></td><td>0.0</td></tr>
+<tr><td><span class="badge badge-low">Low</span></td><td>0.1 – 3.9</td></tr>
+<tr><td><span class="badge badge-medium">Medium</span></td><td>4.0 – 6.9</td></tr>
+<tr><td><span class="badge badge-high">High</span></td><td>7.0 – 8.9</td></tr>
+<tr><td><span class="badge badge-critical">Critical</span></td><td>9.0 – 10.0</td></tr>
+</tbody>
+</table>
+</section>
+<section id="appendix-b">
+<h2>Appendix B: Redaction</h2>
+{{ draft_banner(redaction) }}
+{% if redaction.unredacted %}
+<p>This report was not redacted. It may contain secrets and personal data from the evidence. Do not distribute it.</p>
+{% else %}
+<p>Secrets and personal data in evidence and reproduction steps were replaced with <code>[REDACTED:NAME]</code> tokens. Redaction is pattern-based and is a safety net, not a guarantee.</p>
+{% if redaction.counts %}
+<table>
+<thead><tr><th scope="col">Pattern</th><th scope="col">Values redacted</th></tr></thead>
+<tbody>
+{% for name, count in redaction.counts %}
+<tr><td>{{ name }}</td><td>{{ count }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+{% for line in redaction.lines[1:] %}
+<p>{{ line }}</p>
+{% endfor %}
+{% endif %}
+</section>

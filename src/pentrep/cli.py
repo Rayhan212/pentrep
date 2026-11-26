@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+import shutil
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -172,6 +174,132 @@ def schema(
     except OSError as exc:
         raise _fail(f"error: cannot write {output}: {exc}", ExitCode.RENDER_ERROR) from None
     typer.echo(f"Wrote {output}")
+
+
+class BuildFormat(StrEnum):
+    """Output formats for ``build`` (FR-03)."""
+
+    HTML = "html"
+    PDF = "pdf"
+    MD = "md"
+    ALL = "all"
+
+
+NAME_RE: Final = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
+DEFAULT_OUTPUT_DIR: Final = Path("report")
+DRAFT_WARNING: Final = (
+    "warning: redaction is disabled; the report is marked UNREDACTED DRAFT \N{EN DASH} "
+    "DO NOT DISTRIBUTE"
+)
+
+
+def _check_name(name: str) -> str:
+    if not NAME_RE.match(name) or name in {".", ".."}:
+        raise typer.BadParameter("must match ^[A-Za-z0-9._-]{1,100}$")
+    return name
+
+
+def _size(n: int) -> str:
+    return f"{n} B" if n < 1024 else f"{n / 1024:.1f} KB"
+
+
+@app.command()
+def build(
+    file: Annotated[
+        Path,
+        typer.Argument(
+            help="The findings.yaml file to render.", exists=True, dir_okay=False, readable=True
+        ),
+    ],
+    formats: Annotated[
+        list[BuildFormat] | None,
+        typer.Option("--format", "-f", help="html, pdf, md or all; repeatable. Default: all."),
+    ] = None,
+    output_dir: Annotated[
+        Path, typer.Option("--output-dir", "-o", help="Directory for the report files.")
+    ] = DEFAULT_OUTPUT_DIR,
+    name: Annotated[
+        str,
+        typer.Option(
+            "--name", "-n", callback=_check_name, help="Output file name without extension."
+        ),
+    ] = "pentest-report",
+    template_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--template-dir",
+            exists=True,
+            file_okay=False,
+            help="Templates that override the theme.",
+        ),
+    ] = None,
+    no_redact: Annotated[
+        bool, typer.Option("--no-redact", help="Disable redaction (marks an UNREDACTED DRAFT).")
+    ] = False,
+    strict: Annotated[bool, typer.Option("--strict", help="Fail on validation warnings.")] = False,
+    quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Print only errors.")] = False,
+) -> None:
+    """Validate FILE and render the report as HTML, Markdown and PDF (FR-03)."""
+    import jinja2  # imported lazily so --help stays fast (NFR-04)
+
+    from pentrep.render.html import render_html
+    from pentrep.render.md import render_md
+
+    wanted = set(formats or [BuildFormat.ALL])
+    if BuildFormat.ALL in wanted:
+        wanted = {BuildFormat.HTML, BuildFormat.MD, BuildFormat.PDF}
+
+    result = load_report(file, display=str(file))
+    failed = bool(result.errors) or (strict and bool(result.warnings))
+    for diagnostic in result.diagnostics:
+        if failed or not quiet or diagnostic.code.level.value == "error":
+            typer.echo(format_text(diagnostic), err=True)
+    if failed or result.report is None:
+        errors, warnings = len(result.errors), len(result.warnings)
+        typer.echo(
+            f"✗ {file} is invalid: {_count(errors, 'error')}, {_count(warnings, 'warning')}",
+            err=True,
+        )
+        raise typer.Exit(ExitCode.VALIDATION_FAILED)
+
+    report, summary = redact_report(result.report, enabled=False if no_redact else None)
+    if not summary.enabled:
+        typer.echo(DRAFT_WARNING, err=True)
+    base_dir = file.parent
+    outputs: list[tuple[Path, bytes]] = []
+    copies: list[tuple[Path, Path]] = []
+    try:
+        if BuildFormat.HTML in wanted:
+            html = render_html(report, summary, base_dir, template_dir)
+            outputs.append((output_dir / f"{name}.html", html.encode("utf-8")))
+        if BuildFormat.MD in wanted:
+            markdown = render_md(report, summary, base_dir, template_dir)
+            outputs.append((output_dir / f"{name}.md", markdown.text.encode("utf-8")))
+            copies.extend((source, output_dir / relative) for source, relative in markdown.assets)
+    except jinja2.TemplateError as exc:
+        raise _fail(f"error: template error: {exc}", ExitCode.RENDER_ERROR) from None
+    written: list[Path] = []
+    try:
+        for path, data in outputs:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+            written.append(path)
+        for source, target in copies:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+            written.append(target)
+    except OSError as exc:
+        raise _fail(f"error: cannot write to {output_dir}: {exc}", ExitCode.RENDER_ERROR) from None
+    if not quiet:
+        for path in written:
+            typer.echo(f"Wrote {path.as_posix()} ({_size(path.stat().st_size)})")
+        for line in format_summary(summary):
+            typer.echo(line)
+    if BuildFormat.PDF in wanted:
+        raise _fail(
+            "error: PDF output is not implemented yet; the other requested formats were written",
+            ExitCode.RENDER_ERROR,
+        )
 
 
 def run(cli_app: typer.Typer, argv: Sequence[str]) -> int:

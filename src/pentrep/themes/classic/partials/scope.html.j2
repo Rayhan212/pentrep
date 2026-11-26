@@ -1,0 +1,27 @@
+{% from "partials/macros.html.j2" import draft_banner %}
+<section id="scope-and-methodology">
+<h2>Scope and methodology</h2>
+{{ draft_banner(redaction) }}
+<h3>In scope</h3>
+<table>
+<thead><tr><th scope="col">Asset</th><th scope="col">Type</th><th scope="col">Notes</th></tr></thead>
+<tbody>
+{% for asset in engagement.scope.in_scope %}
+<tr><td>{{ asset.asset }}</td><td>{{ asset.type }}</td><td>{{ asset.notes or "" }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% if engagement.scope.out_of_scope %}
+<h3>Out of scope</h3>
+<table>
+<thead><tr><th scope="col">Asset</th><th scope="col">Type</th><th scope="col">Notes</th></tr></thead>
+<tbody>
+{% for asset in engagement.scope.out_of_scope %}
+<tr><td>{{ asset.asset }}</td><td>{{ asset.type }}</td><td>{{ asset.notes or "" }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+<h3>Methodology</h3>
+{{ engagement.methodology | markdown }}
+</section>

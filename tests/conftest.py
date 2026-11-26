@@ -79,3 +79,22 @@ def no_leaks() -> Callable[[Iterable[str]], None]:
 def leaky_secrets() -> tuple[str, ...]:
     """The 20 fake secrets seeded in valid/leaky.yaml."""
     return LEAKY_SECRETS
+
+
+# --- Golden files (M5.9) ----------------------------------------------------------------------
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """``--update-golden`` rewrites tests/golden/* instead of comparing against them."""
+    parser.addoption(
+        "--update-golden",
+        action="store_true",
+        default=False,
+        help="Regenerate golden files in tests/golden/ (review the diff before committing).",
+    )
+
+
+@pytest.fixture
+def update_golden(request: pytest.FixtureRequest) -> bool:
+    """True when pytest runs with ``--update-golden``."""
+    return bool(request.config.getoption("--update-golden"))

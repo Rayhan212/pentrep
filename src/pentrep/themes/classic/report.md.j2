@@ -1,0 +1,187 @@
+{# banner() is appended to a heading line: it adds the FR-36 notice below the heading. #}
+{% macro banner() %}{% if redaction.unredacted %}{{ "\n\n> **" ~ redaction.banner ~ "**" }}{% endif %}{% endmacro %}
+{% macro severity(f) %}{% if f.score is none %}**Informational**{% else %}**{{ f.severity.label }} ({{ f.score_text }})**{% endif %}{% endmacro %}
+# {{ engagement.title | md_inline }}{{ banner() }}
+
+{% if branding.logo_path %}
+![{{ (branding.company_name or engagement.client.name) | md_inline }} logo]({{ image_src(branding.logo_path, branding.logo_mime, branding.logo_asset_name) }})
+
+{% endif %}
+{% if branding.company_name %}
+{{ branding.company_name | md_inline }}
+
+{% endif %}
+- **Client:** {{ engagement.client.name | md_inline }}
+- **Report date:** {{ engagement.report_date }}
+- **Version:** {{ engagement.report_version }}
+- **Classification:** {{ engagement.classification | md_inline }}
+
+## Document control{{ banner() }}
+
+| Field | Value |
+| --- | --- |
+| Report version | {{ engagement.report_version }} |
+| Report date | {{ engagement.report_date }} |
+| Classification | {{ engagement.classification | md_cell }} |
+| Client | {{ engagement.client.name | md_cell }}{% if engagement.client.contact %} ({{ engagement.client.contact | md_cell }}){% endif %} |
+| Testing period | {{ engagement.start_date }} to {{ engagement.end_date }} |
+
+| Tester | Role | Email |
+| --- | --- | --- |
+{% for tester in engagement.testers %}
+| {{ tester.name | md_cell }} | {{ (tester.role or "") | md_cell }} | {{ (tester.email or "") | md_cell }} |
+{% endfor %}
+
+## Table of contents{{ banner() }}
+
+- [Executive summary](#executive-summary)
+- [Scope and methodology](#scope-and-methodology)
+- [Findings summary](#findings-summary)
+- [Detailed findings](#detailed-findings)
+{% for f in findings %}
+  - [{{ f.id }}: {{ f.title | md_inline }}](#{{ (f.id ~ ": " ~ f.title) | slug }})
+{% endfor %}
+- [Appendix A: CVSS 3.1 severity scale](#appendix-a-cvss-31-severity-scale)
+- [Appendix B: Redaction](#appendix-b-redaction)
+
+## Executive summary{{ banner() }}
+
+{% if engagement.executive_summary %}
+{{ engagement.executive_summary | md_block }}
+
+{% endif %}
+| Severity | Findings |
+| --- | ---: |
+{% for label, count in stats.counts.items() %}
+| {{ label }} | {{ count }} |
+{% endfor %}
+
+Overall risk: **{{ stats.overall_risk.label }}**
+
+## Scope and methodology{{ banner() }}
+
+### In scope
+
+| Asset | Type | Notes |
+| --- | --- | --- |
+{% for asset in engagement.scope.in_scope %}
+| {{ asset.asset | md_cell }} | {{ asset.type }} | {{ (asset.notes or "") | md_cell }} |
+{% endfor %}
+{% if engagement.scope.out_of_scope %}
+
+### Out of scope
+
+| Asset | Type | Notes |
+| --- | --- | --- |
+{% for asset in engagement.scope.out_of_scope %}
+| {{ asset.asset | md_cell }} | {{ asset.type }} | {{ (asset.notes or "") | md_cell }} |
+{% endfor %}
+{% endif %}
+
+### Methodology
+
+{{ engagement.methodology | md_block }}
+
+## Findings summary{{ banner() }}
+
+| ID | Title | Severity | Status |
+| --- | --- | --- | --- |
+{% for f in findings %}
+| [{{ f.id }}](#{{ (f.id ~ ": " ~ f.title) | slug }}) | {{ f.title | md_cell }} | {{ severity(f) }} | {{ f.status_label }} |
+{% endfor %}
+
+## Detailed findings{{ banner() }}
+{% for f in findings %}
+
+### {{ f.id }}: {{ f.title | md_inline }}
+
+- **Severity:** {{ severity(f) }}
+{% if f.score is not none %}
+- **CVSS 3.1:** {{ f.score_text }} (Impact {{ f.impact_score }}, Exploitability {{ f.exploitability_score }})
+- **Vector:** `{{ f.vector }}`
+{% endif %}
+- **Status:** {{ f.status_label }}
+{% if f.cwe %}
+- **CWE:** {% for number, url in f.cwe %}[CWE-{{ number }}]({{ url }}){% if not loop.last %}, {% endif %}{% endfor %}
+
+{% endif %}
+- **Affected assets:** {% for asset in f.affected_assets %}{{ asset | md_inline }}{% if not loop.last %}, {% endif %}{% endfor %}
+
+
+**Description**
+
+{{ f.description | md_block }}
+
+**Impact**
+
+{{ f.impact | md_block }}
+
+**Steps to reproduce**
+
+{% for step in f.steps_to_reproduce %}
+{{ loop.index }}. {{ step | md_step }}
+{% endfor %}
+{% if f.evidence %}
+
+**Evidence**
+{% for item in f.evidence %}
+
+**Evidence {{ item.number }}: {{ item.caption | md_inline }}**
+
+{% if item.type == "image" %}
+![{{ item.caption | md_inline }}]({{ image_src(item.image_path, item.mime, item.asset_name) }})
+{% else %}
+{% set marker = item.content | fence %}
+{{ marker }}{{ item.language or "" }}
+{{ item.content.rstrip("\n") }}
+{{ marker }}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+**Remediation**
+
+{{ f.remediation | md_block }}
+{% if f.references %}
+
+**References**
+
+{% for url in f.references %}
+- <{{ url | md_url }}>
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+## Appendix A: CVSS 3.1 severity scale{{ banner() }}
+
+| Severity | Base score |
+| --- | --- |
+| None | 0.0 |
+| Low | 0.1 – 3.9 |
+| Medium | 4.0 – 6.9 |
+| High | 7.0 – 8.9 |
+| Critical | 9.0 – 10.0 |
+
+## Appendix B: Redaction{{ banner() }}
+
+{% if redaction.unredacted %}
+This report was not redacted. It may contain secrets and personal data from the evidence. Do not distribute it.
+{% else %}
+Secrets and personal data in evidence and reproduction steps were replaced with `[REDACTED:NAME]` tokens. Redaction is pattern-based and is a safety net, not a guarantee.
+{% if redaction.counts %}
+
+| Pattern | Values redacted |
+| --- | ---: |
+{% for name, count in redaction.counts %}
+| {{ name }} | {{ count }} |
+{% endfor %}
+{% endif %}
+{% for line in redaction.lines[1:] %}
+
+{{ line }}
+{% endfor %}
+{% endif %}
+
+---
+
+Generated {{ generated_at }} by pentrep {{ pentrep_version }}.

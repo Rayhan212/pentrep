@@ -202,10 +202,10 @@ def load_yaml(path: Path, display: str | None = None) -> LoadedYaml:
 
 LOGO_MAX_BYTES: Final = 2 * 1024 * 1024
 IMAGE_MAX_BYTES: Final = 5 * 1024 * 1024
-_SNIFF_BYTES: Final = 1024
+SNIFF_BYTES: Final = 1024
 
 
-def _sniff(head: bytes) -> str | None:
+def sniff_image_type(head: bytes) -> str | None:
     """Detect an image type from its first bytes (the extension is not trusted)."""
     if head.startswith(b"\x89PNG\r\n\x1a\n"):
         return "PNG"
@@ -266,7 +266,7 @@ def _check_file(base_dir: Path, ref: str, rule: _FileRule) -> tuple[ErrorCode, s
         limit = rule.max_bytes // (1024 * 1024)
         return ErrorCode.E303, f"file '{ref}' is larger than {limit} MB"
     with target.open("rb") as handle:
-        kind = _sniff(handle.read(_SNIFF_BYTES))
+        kind = sniff_image_type(handle.read(SNIFF_BYTES))
     if kind not in rule.kinds:
         found = kind or "unknown"
         return ErrorCode.E303, (

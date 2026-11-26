@@ -25,3 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   SECRET, CARD with Luhn, EMAIL, PRIVATE_IP), with priority/overlap rules, custom patterns with optional
   `value` groups (E304 for a bad name or regex), and an allowlist. Output is deterministic.
 - `validate` prints a redaction preview with counts per pattern (never the values).
+- `pentrep build FILE` with `-f html|md`, `-o`, `-n`, `--template-dir`, `--no-redact`, `--strict` and `-q`:
+  a self-contained HTML report (inline CSS, `data:` images, no scripts, Pygments highlighting) and a GFM
+  Markdown report with copied image assets, both from the `classic` theme. Output is deterministic and covered
+  by golden files.
+- Docs: `docs/templates.md` (template context, filters and partials for `--template-dir`).
