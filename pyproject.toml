@@ -54,6 +54,7 @@ dev = [
     "pytest-cov>=7.1.0",
     "pytest-socket>=0.7,<1",
     "ruff>=0.17.6",
+    "types-pygments>=2.19,<3",
 ]
 
 [tool.hatch.version]

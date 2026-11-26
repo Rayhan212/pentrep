@@ -1,8 +1,4 @@
-"""Syntax highlighting for evidence with Pygments, as inline styles (no JavaScript, FR-45).
-
-Pygments ships no type hints and ``types-Pygments`` is not a project dependency, so its imports
-are untyped; results are converted to ``str`` explicitly.
-"""
+"""Syntax highlighting for evidence with Pygments, as inline styles (no JavaScript, FR-45)."""
 
 from __future__ import annotations
 
@@ -11,11 +7,12 @@ from collections.abc import Iterator
 from functools import cache
 from typing import Final
 
-from pygments import format as pygments_format  # type: ignore[import-untyped]
-from pygments.formatters import HtmlFormatter  # type: ignore[import-untyped]
-from pygments.lexers import HttpLexer, TextLexer, get_lexer_by_name  # type: ignore[import-untyped]
-from pygments.token import Error  # type: ignore[import-untyped]
-from pygments.util import ClassNotFound  # type: ignore[import-untyped]
+from pygments import format as pygments_format
+from pygments.formatters import HtmlFormatter
+from pygments.lexer import Lexer
+from pygments.lexers import HttpLexer, TextLexer, get_lexer_by_name
+from pygments.token import Error, _TokenType
+from pygments.util import ClassNotFound
 
 # A line that starts an HTTP message: a request line or a status line.
 _MESSAGE_START: Final = re.compile(
@@ -25,18 +22,17 @@ _MESSAGE_START: Final = re.compile(
 # Keep evidence verbatim: Pygments strips leading/trailing newlines and adds one by default.
 VERBATIM: Final = {"stripnl": False, "ensurenl": False}
 
-# Pygments tokens are (token type, text) pairs; the token type is an untyped Pygments object.
-Tokens = list[tuple[object, str]]
+Tokens = list[tuple[_TokenType, str]]
 
 
 @cache
-def _formatter() -> object:
+def _formatter() -> HtmlFormatter[str]:
     return HtmlFormatter(noclasses=True, style="default")
 
 
-def _tokens(lexer: object, text: str) -> Tokens:
+def _tokens(lexer: Lexer, text: str) -> Tokens:
     """Tokens from ``lexer``, or plain text if it reports errors (no red error boxes)."""
-    tokens: Tokens = list(lexer.get_tokens(text))  # type: ignore[attr-defined]
+    tokens: Tokens = list(lexer.get_tokens(text))
     if any(token is Error for token, _ in tokens):
         return list(TextLexer(**VERBATIM).get_tokens(text))
     return tokens
