@@ -13,6 +13,8 @@ import typer
 from pentrep import cli
 from pentrep.diagnostics import ExitCode
 
+# Env vars that make Typer/Rich force or disable colour; removed so tests behave the same in CI.
+COLOUR_ENV_VARS = frozenset({"FORCE_COLOR", "NO_COLOR", "PY_COLORS", "GITHUB_ACTIONS"})
 ANSI_SGR = re.compile(r"\x1b\[([0-9;]*)m")
 
 
@@ -104,7 +106,7 @@ def test_no_color_env_wins_over_force_color() -> None:
 
 def _pentrep(*args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     """Run ``python -m pentrep`` in a subprocess (stdout/stderr are pipes, not a TTY)."""
-    full_env = {k: v for k, v in os.environ.items() if k not in {"FORCE_COLOR", "NO_COLOR"}}
+    full_env = {k: v for k, v in os.environ.items() if k not in COLOUR_ENV_VARS}
     full_env.update(env or {})
     return subprocess.run(
         [sys.executable, "-m", "pentrep", *args],

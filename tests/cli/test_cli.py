@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import runpy
 import subprocess
 import sys
@@ -36,9 +37,12 @@ def test_python_dash_m_matches_console_script() -> None:
 
 def test_help_lists_global_options(runner: CliRunner) -> None:
     result = runner.invoke(app, ["--help"])
+    # Typer may force colour in-process (e.g. GITHUB_ACTIONS is set), so compare plain text.
+    text = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout)
     assert result.exit_code == 0
-    assert "--version" in result.stdout
-    assert "--help" in result.stdout
+    assert "--version" in text
+    assert "--debug" in text
+    assert "--help" in text
 
 
 def test_main_exits_with_run_code(
