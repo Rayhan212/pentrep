@@ -3,16 +3,70 @@
 > Turn a `findings.yaml` file into a professional penetration test report — HTML, PDF and Markdown —
 > with CVSS 3.1 scoring and PII redaction built in.
 
-**Status:** early development (v0.1 in progress). HTML, Markdown and PDF reports work; packaging and
-release come next.
+[![CI](https://github.com/Rayhan212/pentrep/actions/workflows/ci.yml/badge.svg)](https://github.com/Rayhan212/pentrep/actions/workflows/ci.yml)
+
+**Status:** v0.1.0 release in preparation.
+
+- Validates `findings.yaml` and reports every problem with `file:line:col`, a stable error code and a hint.
+- Scores findings from CVSS 3.1 vectors (own implementation, checked against FIRST's published examples).
+- Redacts secrets and personal data in evidence by default (cookies, tokens, passwords, keys, cards,
+  e-mail addresses, private IPs, plus your own patterns).
+- Renders one report as a self-contained HTML file, a PDF and GitHub-Flavored Markdown.
+
+**[See the sample report](https://rayhan212.github.io/pentrep/)**, built from
+[`examples/findings.yaml`](examples/findings.yaml) by CI: [HTML](https://rayhan212.github.io/pentrep/pentest-report.html) ·
+[PDF](https://rayhan212.github.io/pentrep/pentest-report.pdf) · [Markdown](https://rayhan212.github.io/pentrep/pentest-report.md).
+
+| Cover | Finding |
+|---|---|
+| [![Report cover](docs/img/cover.png)](docs/img/cover.png) | [![A finding page](docs/img/finding.png)](docs/img/finding.png) |
+
+## Quickstart
+
+```bash
+pipx install pentrep
+pentrep init my-test
+pentrep build my-test/findings.yaml
+```
+
+`init` writes an example `findings.yaml` with a logo and an evidence image. `build` validates it and writes
+`report/pentest-report.html`, `report/pentest-report.pdf` and `report/pentest-report.md` (with images in
+`report/assets/`). PDF output needs the system libraries below; without them, the HTML and Markdown reports are
+still written.
+
+### PDF output: system libraries
+
+PDF rendering uses [WeasyPrint](https://weasyprint.org/), which needs Pango and HarfBuzz:
+
+| OS | Install |
+|---|---|
+| Debian / Ubuntu | `sudo apt install libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b` |
+| macOS (Homebrew) | `brew install pango` (on Apple Silicon, also `export DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`) |
+| Windows / other | Use the Docker image below (Windows is not officially supported in v0.1) |
+
+Without these libraries, `build` writes the HTML and Markdown reports, then exits with code 3 and prints an
+install hint. PDFs embed only the bundled fonts (Source Sans 3, Source Code Pro), so they look the same on every
+machine.
+
+### Docker
+
+The image includes all PDF dependencies. Run it from the directory that contains `findings.yaml`:
+
+```bash
+docker run --rm -v "$PWD:/work" ghcr.io/rayhan212/pentrep init
+docker run --rm -v "$PWD:/work" ghcr.io/rayhan212/pentrep build findings.yaml
+```
+
+The container runs as a non-root user (uid 1000) in `/work`. If your files belong to another user, add
+`--user "$(id -u):$(id -g)"` so the report can be written.
 
 ## Usage
 
 ```bash
-pentrep init my-test/                      # example findings.yaml + logo + evidence image
-pentrep validate my-test/findings.yaml     # every error with file:line:col, code and hint
-pentrep build my-test/findings.yaml               # report/pentest-report.{html,md,pdf}
-pentrep schema -o findings.schema.json     # JSON Schema for editor completion
+pentrep init my-test/                          # example findings.yaml + logo + evidence image
+pentrep validate my-test/findings.yaml         # every error with file:line:col, code and hint
+pentrep build my-test/findings.yaml            # report/pentest-report.{html,md,pdf}
+pentrep schema -o findings.schema.json         # JSON Schema for editor completion
 ```
 
 | Command | Flags |
@@ -26,35 +80,25 @@ pentrep schema -o findings.schema.json     # JSON Schema for editor completion
 Exit codes: `0` success, `1` validation failed, `2` usage error, `3` I/O or rendering failure.
 
 - File format: [docs/schema.md](docs/schema.md)
-- Error codes: [docs/errors.md](docs/errors.md)
-- Custom templates: [docs/templates.md](docs/templates.md)
+- Error codes, with examples and fixes: [docs/errors.md](docs/errors.md)
+- Custom templates (`--template-dir`): [docs/templates.md](docs/templates.md)
 
-Redaction is a safety net, not a guarantee: always review evidence before you share a report.
-
-### PDF output
-
-PDF rendering uses [WeasyPrint](https://weasyprint.org/), which needs the Pango and HarfBuzz system libraries:
-
-| OS | Install |
-|---|---|
-| Debian / Ubuntu | `sudo apt install libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b` |
-| macOS (Homebrew) | `brew install pango` (on Apple Silicon, also `export DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`) |
-| Other / Windows | Use the Docker image (coming with the v0.1.0 release) |
-
-Without these libraries, `build` still writes the HTML and Markdown reports, then exits with code 3 and an
-install hint. PDFs embed the bundled OFL fonts (Source Sans 3, Source Code Pro), so they look the same on every
-machine.
-
-- Product requirements: [docs/PRD.md](docs/PRD.md)
-- Implementation plan & progress: [docs/PLAN.md](docs/PLAN.md)
+> [!IMPORTANT]
+> **Redaction is a safety net, not a guarantee.** It is pattern-based and can miss secrets that don't look like
+> any known format, and images are not scanned. Always review the evidence before you share a report. A report
+> built with `--no-redact` is marked `UNREDACTED DRAFT – DO NOT DISTRIBUTE` on every page.
 
 ## Development
 
 ```bash
-uv sync
+uv sync --all-extras
 uv run pentrep --version
-uv run pytest
+uv run pytest -m "not perf"     # full suite without benchmarks
+uv run pytest -m perf           # performance checks (NFR-01..04)
 ```
+
+- Product requirements: [docs/PRD.md](docs/PRD.md)
+- Implementation plan & progress: [docs/PLAN.md](docs/PLAN.md)
 
 ## License
 

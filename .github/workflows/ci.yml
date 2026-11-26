@@ -62,9 +62,59 @@ jobs:
           enable-cache: true
       - run: uv sync --locked
       - name: pytest (with coverage gate)
-        run: uv run pytest --cov --cov-report=term-missing
+        # Benchmarks run in the "perf" job, so timing noise cannot make this matrix flaky.
+        run: uv run pytest -m "not perf" --cov --cov-report=term-missing
         env:
           # A missing WeasyPrint library must fail CI, not silently skip the pdf tests (M6.7).
           PENTREP_REQUIRE_PDF: "1"
           # cffi does not search Homebrew's lib directory on Apple Silicon by default.
           DYLD_FALLBACK_LIBRARY_PATH: ${{ runner.os == 'macOS' && '/opt/homebrew/lib' || '' }}
+
+  perf:
+    name: Performance (NFR-01..04)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Pango
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libharfbuzz-subset0
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - name: pytest -m perf
+        run: uv run pytest -m perf -v --durations=0
+        env:
+          PENTREP_REQUIRE_PDF: "1"
+
+  package:
+    name: Packaging smoke (wheel in a fresh venv)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Pango
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libharfbuzz-subset0
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+      - name: Build the wheel (at most 2 MB, NFR-12)
+        run: |
+          uv build --wheel --out-dir dist
+          size=$(stat -c %s dist/*.whl)
+          echo "wheel size: $size bytes"
+          test "$size" -le $((2 * 1024 * 1024))
+      - name: Install into a fresh venv and build a report
+        run: |
+          work=$(mktemp -d)
+          python -m venv "$work/venv"
+          "$work/venv/bin/python" -m pip install --quiet dist/*.whl
+          cd "$work"
+          "$work/venv/bin/pentrep" --version
+          "$work/venv/bin/pentrep" init project
+          "$work/venv/bin/pentrep" build project/findings.yaml -f all -o out
+          for ext in html md pdf; do test -s "out/pentest-report.$ext"; done
+          ls -l out

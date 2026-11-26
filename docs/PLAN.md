@@ -353,20 +353,48 @@ Runnable at the end: `pentrep build examples/findings.yaml` (default `-f all`) p
 ## M7 — Sample report, packaging, Docker & release
 Runnable at the end: `pipx install pentrep && pentrep init && pentrep build findings.yaml`, and `docker run … build findings.yaml`.
 
-- [ ] M7.1 Perf benchmarks (NFR-01..04): a generator for 50 findings with 20 images, timing tests marked `perf`, a dedicated CI job, and a check that `--help` does not import `weasyprint`
+- [x] M7.1 Perf benchmarks (NFR-01..04): a generator for 50 findings with 20 images, timing tests marked `perf`, a dedicated CI job, and a check that `--help` does not import `weasyprint`
   files: `tests/perf/test_benchmarks.py`, `tests/perf/conftest.py`, `.github/workflows/ci.yml`
-- [ ] M7.2 Packaging smoke job: build the wheel, install it into a fresh venv, run `init` + `build -f all` in a temp dir, assert three non-empty files, check wheel size ≤ 2 MB
+  > note: timings are medians of 5 runs of `python -m pentrep` in a subprocess (start-up included). Locally:
+  > validate ≈ 0.24 s, build html+md ≈ 0.5 s, build pdf ≈ 5.8 s, `--help` ≈ 0.22 s. The generator (seeded noise PNGs, about
+  > 360 KB each) and the lazy-import check are not marked `perf`, so they run in the main matrix. The lazy-import check
+  > covers WeasyPrint and Jinja2 (NFR-04) but not Pygments, which Rich imports for Typer's help. The CI matrix now runs
+  > `-m "not perf"`; a separate `perf` job on ubuntu-latest runs `-m perf`.
+- [x] M7.2 Packaging smoke job: build the wheel, install it into a fresh venv, run `init` + `build -f all` in a temp dir, assert three non-empty files, check wheel size ≤ 2 MB
   files: `.github/workflows/ci.yml`
-- [ ] M7.3 Dockerfile: `python:3.12-slim` with the Pango/HarfBuzz libs, non-root user, `WORKDIR /work`, `ENTRYPOINT ["pentrep"]`; `.dockerignore`; local check that the image is ≤ 400 MB
+  > note: the `package` job builds the wheel with uv, checks that it is at most 2 MB, installs it with pip into a
+  > plain `python -m venv`, then runs `init` + `build -f all` in a temp dir and requires non-empty .html/.md/.pdf files.
+  > The same steps passed locally (wheel 704 KB). The job is in `ci.yml`.
+- [x] M7.3 Dockerfile: `python:3.12-slim` with the Pango/HarfBuzz libs, non-root user, `WORKDIR /work`, `ENTRYPOINT ["pentrep"]`; `.dockerignore`; local check that the image is ≤ 400 MB
   files: `Dockerfile`, `.dockerignore`
-- [ ] M7.4 Docker workflow: build, smoke test (`init` + `build`), push to GHCR on tags (`:<version>`, `:latest`)
+  > note: there is no Docker daemon in the dev environment, so (as agreed with the owner) the image is built and
+  > measured in CI: Docker run 45807739701 shows 82 MB uncompressed (limit 400 MB). Runtime dependencies are installed
+  > from a hash-pinned export of `uv.lock`; the user is `pentrep` (uid 1000); the default command is `--help`.
+- [x] M7.4 Docker workflow: build, smoke test (`init` + `build`), push to GHCR on tags (`:<version>`, `:latest`)
   files: `.github/workflows/docker.yml`
-- [ ] M7.5 GitHub Pages workflow: build the sample report from `examples/` (HTML + PDF) and publish it
+  > note: the workflow builds the image on every push/PR and checks size, non-root, `/work` and an `init` +
+  > `build` smoke test (HTML/MD/PDF): green in run 45807739701 on PR #2. GHCR pushes run only on `v*` tags, after checking
+  > that the tag matches `pentrep --version`; `:latest` is pushed only for final versions. The push step is first
+  > exercised by the M7.8 tag.
+- [x] M7.5 GitHub Pages workflow: build the sample report from `examples/` (HTML + PDF) and publish it
   files: `.github/workflows/pages.yml`
-- [ ] M7.6 Release workflow with PyPI Trusted Publishing: `v*-rc*` tags go to TestPyPI, `v*.*.*` tags go to PyPI. The trusted publisher must be configured on pypi.org and test.pypi.org by the repo owner (a manual step)
+  > note: the build job (sample report from `examples/` plus an index page) is green in run 45807739644 on PR #2.
+  > Deployment runs only on `main` (GitHub Pages source = GitHub Actions, set by the owner), so the site at
+  > https://rayhan212.github.io/pentrep/ appears after the merge; M7.9 checks it.
+- [x] M7.6 Release workflow with PyPI Trusted Publishing: `v*-rc*` tags go to TestPyPI, `v*.*.*` tags go to PyPI. The trusted publisher must be configured on pypi.org and test.pypi.org by the repo owner (a manual step)
   files: `.github/workflows/release.yml`
-- [ ] M7.7 README: quickstart (3 commands), WeasyPrint install matrix, Docker usage, cover and finding screenshots, links to the sample report, the "redaction is a safety net" notice, a link to `docs/errors.md`
+  > note: `.github/workflows/release.yml` uses environment `testpypi` for `vX.Y.Z-rcN` tags and `pypi` (required
+  > reviewer) for `vX.Y.Z`, matching the trusted publishers the owner registered on 2026-11-26. The build job rejects
+  > other tag shapes and fails if the tag does not match the wheel version (`v0.1.0-rc1` ↔ `0.1.0rc1`). Publishing
+  > uses `pypa/gh-action-pypi-publish` with `id-token: write`; no token is stored. The workflow only runs on tags, so it
+  > is first exercised in M7.8.
+- [x] M7.7 README: quickstart (3 commands), WeasyPrint install matrix, Docker usage, cover and finding screenshots, links to the sample report, the "redaction is a safety net" notice, a link to `docs/errors.md`
   files: `README.md`, `docs/img/*`
+  > note: the README has a 3-command quickstart (`pipx install` → `init` → `build`), the WeasyPrint install matrix,
+  > Docker usage (non-root, with the `--user` tip), cover and finding screenshots in `docs/img/` (rendered from the
+  > example PDF, about 10 KB and 30 KB), links to the Pages sample report (HTML/PDF/MD), the safety-net notice and
+  > `docs/errors.md`. `tests/unit/test_docs.py` checks these sections and that every CLI flag in `--help` appears in the
+  > README (NFR-13).
 - [ ] M7.8 Release candidate: bump to `0.1.0rc1`, update CHANGELOG, tag `v0.1.0-rc1`; in a clean `python:3.12` container run the TestPyPI `pipx install` → `init` → `build -f html -f md` (PRD M7 AC)
   files: `src/pentrep/__init__.py`, `CHANGELOG.md`
 - [ ] M7.9 verify: `uv run pytest -m "perf or not perf"` green; `docker run --rm -v "$PWD/tmp/m7:/work" ghcr.io/<github-user>/pentrep:0.1.0rc1 init && docker run --rm -v "$PWD/tmp/m7:/work" ghcr.io/<github-user>/pentrep:0.1.0rc1 build findings.yaml` produces 3 files; the Pages site shows the sample report; then bump to `0.1.0`, tag `v0.1.0`, and confirm `pipx install pentrep` from PyPI works

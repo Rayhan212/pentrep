@@ -34,3 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   classification header, `Page X of Y` footers, TOC page numbers, bookmarks and a new page per finding. It embeds
   only the bundled OFL fonts (Source Sans 3, Source Code Pro) and loads no external resources. If WeasyPrint's
   libraries are missing, the other formats are still written and the CLI exits 3 with an install hint.
+- Performance benchmarks for NFR-01..04 (`pytest -m perf`, own CI job) and a check that `--help` does not import
+  WeasyPrint or Jinja2.
+- CI packaging smoke job: build the wheel (≤ 2 MB), install it into a fresh venv, run `init` + `build -f all`.
+- Docker image (`python:3.12-slim`, Pango/HarfBuzz, non-root, `/work`); a workflow builds it, checks size ≤ 400 MB,
+  smoke-tests it and pushes `ghcr.io/rayhan212/pentrep:<version>` (and `:latest` for final releases) on tags.
+- GitHub Pages workflow publishing the sample report built from `examples/`.
+- Release workflow with PyPI Trusted Publishing: `vX.Y.Z-rcN` tags go to TestPyPI, `vX.Y.Z` tags to PyPI.
+- README: quickstart, Docker usage, screenshots and links to the sample report.
