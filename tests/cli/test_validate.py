@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import jsonschema
@@ -122,8 +123,8 @@ def test_usage_errors_exit_2(runner: CliRunner, project: Path, args: list[str]) 
     assert runner.invoke(app, args).exit_code == 2
 
 
-def test_help_lists_every_flag(runner: CliRunner) -> None:
+def test_help_lists_every_flag(runner: CliRunner, plain: Callable[[str], str]) -> None:
     result = runner.invoke(app, ["validate", "--help"])
     assert result.exit_code == 0
     for flag in ("--strict", "--format", "--help"):
-        assert flag in result.stdout
+        assert flag in plain(result.stdout)
