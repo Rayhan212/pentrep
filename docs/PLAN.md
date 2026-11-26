@@ -365,12 +365,22 @@ Runnable at the end: `pipx install pentrep && pentrep init && pentrep build find
   > note: the `package` job builds the wheel with uv, checks that it is at most 2 MB, installs it with pip into a
   > plain `python -m venv`, then runs `init` + `build -f all` in a temp dir and requires non-empty .html/.md/.pdf files.
   > The same steps passed locally (wheel 704 KB). The job is in `ci.yml`.
-- [ ] M7.3 Dockerfile: `python:3.12-slim` with the Pango/HarfBuzz libs, non-root user, `WORKDIR /work`, `ENTRYPOINT ["pentrep"]`; `.dockerignore`; local check that the image is ≤ 400 MB
+- [x] M7.3 Dockerfile: `python:3.12-slim` with the Pango/HarfBuzz libs, non-root user, `WORKDIR /work`, `ENTRYPOINT ["pentrep"]`; `.dockerignore`; local check that the image is ≤ 400 MB
   files: `Dockerfile`, `.dockerignore`
-- [ ] M7.4 Docker workflow: build, smoke test (`init` + `build`), push to GHCR on tags (`:<version>`, `:latest`)
+  > note: there is no Docker daemon in the dev environment, so (as agreed with the owner) the image is built and
+  > measured in CI: Docker run 45807739701 shows 82 MB uncompressed (limit 400 MB). Runtime dependencies are installed
+  > from a hash-pinned export of `uv.lock`; the user is `pentrep` (uid 1000); the default command is `--help`.
+- [x] M7.4 Docker workflow: build, smoke test (`init` + `build`), push to GHCR on tags (`:<version>`, `:latest`)
   files: `.github/workflows/docker.yml`
-- [ ] M7.5 GitHub Pages workflow: build the sample report from `examples/` (HTML + PDF) and publish it
+  > note: the workflow builds the image on every push/PR and checks size, non-root, `/work` and an `init` +
+  > `build` smoke test (HTML/MD/PDF): green in run 45807739701 on PR #2. GHCR pushes run only on `v*` tags, after checking
+  > that the tag matches `pentrep --version`; `:latest` is pushed only for final versions. The push step is first
+  > exercised by the M7.8 tag.
+- [x] M7.5 GitHub Pages workflow: build the sample report from `examples/` (HTML + PDF) and publish it
   files: `.github/workflows/pages.yml`
+  > note: the build job (sample report from `examples/` plus an index page) is green in run 45807739644 on PR #2.
+  > Deployment runs only on `main` (GitHub Pages source = GitHub Actions, set by the owner), so the site at
+  > https://rayhan212.github.io/pentrep/ appears after the merge; M7.9 checks it.
 - [x] M7.6 Release workflow with PyPI Trusted Publishing: `v*-rc*` tags go to TestPyPI, `v*.*.*` tags go to PyPI. The trusted publisher must be configured on pypi.org and test.pypi.org by the repo owner (a manual step)
   files: `.github/workflows/release.yml`
   > note: `.github/workflows/release.yml` uses environment `testpypi` for `vX.Y.Z-rcN` tags and `pypi` (required
