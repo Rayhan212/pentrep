@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import jsonschema
@@ -93,7 +94,7 @@ def test_unwritable_output_exits_3(runner: CliRunner, tmp_path: Path) -> None:
     assert "Traceback" not in result.output
 
 
-def test_help_lists_flags(runner: CliRunner) -> None:
+def test_help_lists_flags(runner: CliRunner, plain: Callable[[str], str]) -> None:
     result = runner.invoke(app, ["schema", "--help"])
-    assert "--output" in result.stdout
-    assert "-o" in result.stdout
+    assert "--output" in plain(result.stdout)
+    assert "-o" in plain(result.stdout)

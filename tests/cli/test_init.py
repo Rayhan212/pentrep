@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -82,10 +83,10 @@ def test_unwritable_target_exits_3_without_traceback(runner: CliRunner, tmp_path
     assert "Traceback" not in result.output
 
 
-def test_help_lists_flags(runner: CliRunner) -> None:
+def test_help_lists_flags(runner: CliRunner, plain: Callable[[str], str]) -> None:
     result = runner.invoke(app, ["init", "--help"])
     assert result.exit_code == 0
-    assert "--force" in result.stdout
+    assert "--force" in plain(result.stdout)
 
 
 def test_examples_mirror_the_scaffold() -> None:
