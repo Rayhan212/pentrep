@@ -1,0 +1,30 @@
+# ruff and mypy run through uv so their versions come from uv.lock (same as CI).
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: detect-private-key
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --frozen ruff check --fix
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --frozen ruff format
+        language: system
+        types_or: [python, pyi]
+      - id: mypy
+        name: mypy (strict)
+        entry: uv run --frozen mypy
+        language: system
+        types_or: [python, pyi]
+        pass_filenames: false

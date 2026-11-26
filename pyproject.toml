@@ -1,0 +1,88 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pentrep"
+dynamic = ["version"]
+description = "Turn findings.yaml into professional pentest reports (HTML, PDF, Markdown) with CVSS 3.1 scoring and PII redaction."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "Rayhan212" }]
+keywords = ["pentest", "security", "report", "cvss", "cli"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
+dependencies = [
+    "typer>=0.29.2,<1",
+]
+
+[project.scripts]
+pentrep = "pentrep.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Rayhan212/pentrep"
+Issues = "https://github.com/Rayhan212/pentrep/issues"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.1",
+    "pre-commit>=4.7.0",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.6",
+]
+
+[tool.hatch.version]
+path = "src/pentrep/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pentrep"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S603"]  # assert and subprocess are expected in tests
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+files = ["src"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = ["--strict-markers", "--strict-config", "--import-mode=importlib", "-ra"]
+markers = [
+    "pdf: needs WeasyPrint system libraries (Pango/HarfBuzz)",
+    "perf: performance benchmarks (NFR-01..04)",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["pentrep"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]

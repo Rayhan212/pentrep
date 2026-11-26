@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_FROZEN: "1"
+  FORCE_COLOR: "1"
+
+jobs:
+  lint:
+    name: Lint & type-check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - name: ruff check
+        run: uv run ruff check --output-format=github .
+      - name: ruff format
+        run: uv run ruff format --check .
+      - name: mypy (strict)
+        run: uv run mypy
+
+  test:
+    name: Tests (py${{ matrix.python }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, macos-latest]
+        python: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+      # WeasyPrint system libraries, installed now so PDF tests (M6) need no CI changes.
+      - name: Install Pango (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0
+      - name: Install Pango (macOS)
+        if: runner.os == 'macOS'
+        run: brew install pango
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - run: uv sync --locked
+      - name: pytest (with coverage gate)
+        run: uv run pytest --cov --cov-report=term-missing

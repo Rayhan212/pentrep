@@ -15,21 +15,27 @@ Spec: [PRD.md](PRD.md) · Working rules: [../CLAUDE.md](../CLAUDE.md)
 ## M1 — Skeleton, CLI & tooling (incl. CI)
 Runnable at the end: `uv run pentrep --version`, `uv run pentrep --help`, CI green on push.
 
-- [ ] M1.1 Repo basics: `.gitignore` (`output/`, `report/`, `tmp/`, `.env*`, `.venv/`, `dist/`, `.coverage`, `htmlcov/`, `.mypy_cache/`), MIT licence, README stub, CHANGELOG with an `Unreleased` section
+- [x] M1.1 Repo basics: `.gitignore` (`output/`, `report/`, `tmp/`, `.env*`, `.venv/`, `dist/`, `.coverage`, `htmlcov/`, `.mypy_cache/`), MIT licence, README stub, CHANGELOG with an `Unreleased` section
   files: `.gitignore`, `LICENSE`, `README.md`, `CHANGELOG.md`
-- [ ] M1.2 Check that the name `pentrep` is free on PyPI and GHCR (R-07) and record the result as a note here
+- [x] M1.2 Check that the name `pentrep` is free on PyPI and GHCR (R-07) and record the result as a note here
   files: `docs/PLAN.md`
-- [ ] M1.3 `pyproject.toml`: hatchling, metadata, `requires-python = ">=3.11"`, `typer` runtime dep, `[project.scripts] pentrep = "pentrep.cli:app"`, dev dependency group (pytest, pytest-cov, ruff, mypy, pre-commit); generate `uv.lock`
+  > note (2026-11-26): PyPI and TestPyPI return 404 for `pentrep`, so the name is free. GHCR images live in the
+  > owner's namespace (`ghcr.io/rayhan212/pentrep`), so they can't clash; the proxy blocked a direct GHCR check (403).
+- [x] M1.3 `pyproject.toml`: hatchling, metadata, `requires-python = ">=3.11"`, `typer` runtime dep, `[project.scripts] pentrep = "pentrep.cli:main"`, dev dependency group (pytest, pytest-cov, ruff, mypy, pre-commit); generate `uv.lock`
   files: `pyproject.toml`, `uv.lock`
-- [ ] M1.4 Tool config in `pyproject.toml`: ruff (rules `E,F,I,B,UP,S,SIM,RUF`, line length 100), mypy `strict = true`, pytest (`--strict-markers`, markers `pdf` and `perf`, `testpaths`), coverage (`branch = true`, `fail_under = 85`)
+  > note: the entry point is `pentrep.cli:main` (a wrapper around the Typer `app`), so M1.6 can add
+  > top-level error handling. Runtime deps are pinned below the next major version (`typer>=0.29.2,<1`).
+- [x] M1.4 Tool config in `pyproject.toml`: ruff (rules `E,F,I,B,UP,S,SIM,RUF`, line length 100), mypy `strict = true`, pytest (`--strict-markers`, markers `pdf` and `perf`, `testpaths`), coverage (`branch = true`, `fail_under = 85`)
   files: `pyproject.toml`
-- [ ] M1.5 TDD: test that `--version` and `python -m pentrep --version` print `pentrep 0.1.0.dev0`; implement the Typer app, `__version__` and `__main__`
+- [x] M1.5 TDD: test that `--version` and `python -m pentrep --version` print `pentrep 0.1.0.dev0`; implement the Typer app, `__version__` and `__main__`
   files: `tests/cli/test_cli.py`, `tests/conftest.py`, `src/pentrep/__init__.py`, `src/pentrep/__main__.py`, `src/pentrep/cli.py`
-- [ ] M1.6 TDD: `ExitCode` enum (0/1/2/3), global `--debug` flag, internal-error handler that prints no traceback without `--debug` (FR-00c, FR-00d), and `NO_COLOR` / non-TTY colour handling (FR-00e)
+- [x] M1.6 TDD: `ExitCode` enum (0/1/2/3), global `--debug` flag, internal-error handler that prints no traceback without `--debug` (FR-00c, FR-00d), and `NO_COLOR` / non-TTY colour handling (FR-00e)
   files: `src/pentrep/diagnostics.py`, `src/pentrep/cli.py`, `tests/cli/test_cli.py`
-- [ ] M1.7 Pre-commit hooks: ruff, ruff-format, mypy, check-yaml, end-of-file-fixer, detect-private-key
+- [x] M1.7 Pre-commit hooks: ruff, ruff-format, mypy, check-yaml, end-of-file-fixer, detect-private-key
   files: `.pre-commit-config.yaml`
-- [ ] M1.8 CI workflow: uv setup; ruff, mypy and pytest with the coverage gate; matrix Python 3.11–3.14 × {ubuntu-22.04, ubuntu-24.04, macos-latest}; install Pango (apt / brew) now so the PDF jobs later need no CI changes
+  > note: ruff and mypy run as `repo: local` hooks via `uv run --frozen`, so their versions come from `uv.lock`
+  > (same as CI). Generic hooks come from `pre-commit/pre-commit-hooks` v6.0.0.
+- [x] M1.8 CI workflow: uv setup; ruff, mypy and pytest with the coverage gate; matrix Python 3.11–3.14 × {ubuntu-22.04, ubuntu-24.04, macos-latest}; install Pango (apt / brew) now so the PDF jobs later need no CI changes
   files: `.github/workflows/ci.yml`
 - [ ] M1.9 verify: `uv run ruff check . && uv run ruff format --check . && uv run mypy src && uv run pytest && uv run pentrep --version` all pass locally, and the CI run on GitHub is green for all matrix jobs
 
