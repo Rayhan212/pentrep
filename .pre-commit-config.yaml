@@ -4,6 +4,7 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-yaml
+        exclude: ^tests/fixtures/invalid/e100_  # deliberately invalid YAML (E100 fixtures)
       - id: check-toml
       - id: end-of-file-fixer
       - id: trailing-whitespace

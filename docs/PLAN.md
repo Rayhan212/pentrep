@@ -45,33 +45,71 @@ Runnable at the end: `uv run pentrep --version`, `uv run pentrep --help`, CI gre
 ## M2 — Schema, loader & `init` / `validate` / `schema`
 Runnable at the end: `pentrep init`, then `pentrep validate` with file:line:col errors, and `pentrep schema`.
 
-- [ ] M2.1 TDD: `ErrorCode` enum (E100–E106, E301–E304, W101, W102), `Diagnostic` dataclass, text formatter (PRD §4.2.4 format) and JSON formatter
+- [x] M2.1 TDD: `ErrorCode` enum (E100–E106, E301–E304, W101, W102), `Diagnostic` dataclass, text formatter (PRD §4.2.4 format) and JSON formatter
   files: `src/pentrep/diagnostics.py`, `tests/unit/test_diagnostics.py`
-- [ ] M2.2 TDD: YAML loader using ruamel.yaml safe mode: 10 MB limit, alias/anchor limit of 1,000 nodes, E100 with line/col, and a map from dotted path to (line, col) for every node. Add the `ruamel.yaml` dep
+  > note: `E206` is also in the enum now, because M2.4 emits it. The JSON-format test validates against
+  > `DIAGNOSTICS_JSON_SCHEMA`, so the approved `jsonschema` dev dep was added here instead of in M2.12.
+- [x] M2.2 TDD: YAML loader using ruamel.yaml safe mode: 10 MB limit, alias/anchor limit of 1,000 nodes, E100 with line/col, and a map from dotted path to (line, col) for every node. Add the `ruamel.yaml` dep
   files: `src/pentrep/loader.py`, `tests/unit/test_loader.py`, `pyproject.toml`, `uv.lock`
-- [ ] M2.3 TDD: models part 1: `Engagement`, `Client`, `Tester`, `Asset`, `Scope`, `Branding`, all with `extra="forbid"`; date rule E105; `report_date` default from `SOURCE_DATE_EPOCH`. Add the `pydantic` dep
+  > note: nodes are composed with ruamel.yaml and turned into plain data by pentrep itself, so only
+  > standard tags (str/int/float/bool/null/timestamp, map, seq) are accepted; merge keys, duplicate keys and
+  > nesting deeper than 100 levels are E100. A file over 10 MB is E303 (file too large), not E100.
+- [x] M2.3 TDD: models part 1: `Engagement`, `Client`, `Tester`, `Asset`, `Scope`, `Branding`, all with `extra="forbid"`; date rule E105; `report_date` default from `SOURCE_DATE_EPOCH`. Add the `pydantic` dep
   files: `src/pentrep/models.py`, `tests/unit/test_models.py`, `pyproject.toml`, `uv.lock`
-- [ ] M2.4 TDD: models part 2: `Finding` and `Evidence` (type-dependent fields, E103), `status`, `cwe`, `references`; `cvss_vector` / `severity` exclusivity (E206, vector checked only as a string for now); duplicate ids (E104); `schema_version` (E106)
+  > note: models are strict (no type coercion) and frozen. Dates accept YAML dates or `YYYY-MM-DD` strings;
+  > date-times are rejected. Tester `email` is checked with a simple pattern, because pydantic `EmailStr` needs
+  > the unapproved `email-validator` dep. A `SOURCE_DATE_EPOCH` that is not an integer is ignored.
+- [x] M2.4 TDD: models part 2: `Finding` and `Evidence` (type-dependent fields, E103), `status`, `cwe`, `references`; `cvss_vector` / `severity` exclusivity (E206, vector checked only as a string for now); duplicate ids (E104); `schema_version` (E106)
   files: `src/pentrep/models.py`, `tests/unit/test_models.py`
-- [ ] M2.5 TDD: map Pydantic errors to diagnostics (E101 with a difflib "did you mean" at ratio ≥ 0.6, E102, E103) with line/col from the loader map; collect all errors, sort by line, cap at 100
+  > note: E104 and E206 are checked on the raw data by `models.cross_checks()`, so they are reported
+  > even when other fields of the same finding are invalid. Evidence is a discriminated union on `type`.
+  > A structural `Redaction` model (fields and list limits only) is added now so the scaffold validates;
+  > name/regex checks (E304) stay in M4.5.
+- [x] M2.5 TDD: map Pydantic errors to diagnostics (E101 with a difflib "did you mean" at ratio ≥ 0.6, E102, E103) with line/col from the loader map; collect all errors, sort by line, cap at 100
   files: `src/pentrep/loader.py`, `src/pentrep/diagnostics.py`, `tests/unit/test_loader.py`
-- [ ] M2.6 TDD: file checks for `logo` and image evidence: path confinement including symlinks (E302), file exists (E301), type and size limits (E303)
+  > note: the mapping lives in `loader.py` (`validate_document`, `load_report`); `diagnostics.py` got
+  > `sort_and_cap` in M2.1. E101 also carries a hint listing the allowed fields. A field that belongs to another
+  > evidence type (`content` on an image) is E103, not E101. Pydantic errors whose type is an `ErrorCode`
+  > name (E105, E106) keep that code.
+- [x] M2.6 TDD: file checks for `logo` and image evidence: path confinement including symlinks (E302), file exists (E301), type and size limits (E303)
   files: `src/pentrep/loader.py`, `tests/security/test_hardening.py`
-- [ ] M2.7 TDD: warnings W101 (placeholder text) and W102 (finding without evidence)
+  > note: file types are detected from the first bytes (magic numbers), not the extension. Checks run on
+  > the raw data, so they are reported alongside schema errors.
+- [x] M2.7 TDD: warnings W101 (placeholder text) and W102 (finding without evidence)
   files: `src/pentrep/loader.py`, `tests/unit/test_loader.py`
-- [ ] M2.8 Fixtures: `valid/minimal.yaml` and `valid/full.yaml`; one `invalid/<code>_<case>.yaml` per E1xx/E3xx/W1xx code with a matching `.expected.txt` (stderr golden); a parametrised test over all of them
+  > note: W101 scans every string value (not keys) with word boundaries; one warning per value. W102 points
+  > at `evidence: []` when it is present, else at the finding.
+- [x] M2.8 Fixtures: `valid/minimal.yaml` and `valid/full.yaml`; one `invalid/<code>_<case>.yaml` per E1xx/E3xx/W1xx code with a matching `.expected.txt` (stderr golden); a parametrised test over all of them
   files: `tests/fixtures/valid/*`, `tests/fixtures/invalid/*`, `tests/unit/test_fixtures.py`
-- [ ] M2.9 Security tests: a `!!python/object` tag is rejected, a billion-laughs file is rejected, and a `../` path gives E302
+  > note: goldens hold the diagnostic lines from `format_text`; M2.11 switches the test to real `validate`
+  > stderr. An `e206` fixture is included as well. E304 fixtures come in M4.5. W1xx fixtures exit 1 only
+  > with `--strict`. Placeholder PNGs are generated with the stdlib (no new deps).
+- [x] M2.9 Security tests: a `!!python/object` tag is rejected, a billion-laughs file is rejected, and a `../` path gives E302
   files: `tests/security/test_hardening.py`
-- [ ] M2.10 TDD: `pentrep init [DIR] [--force]` (FR-01) with the scaffold from PRD §4.2.3 and placeholder PNGs; mirror it into `examples/`
+  > note: the behaviour already existed (M2.2, M2.6), so these end-to-end tests passed on the first
+  > run. Instead, a mutation check showed that removing the tag filter or the alias limit makes them fail (or hang).
+- [x] M2.10 TDD: `pentrep init [DIR] [--force]` (FR-01) with the scaffold from PRD §4.2.3 and placeholder PNGs; mirror it into `examples/`
   files: `src/pentrep/scaffold/**`, `examples/**`, `src/pentrep/cli.py`, `tests/cli/test_init.py`
-- [ ] M2.11 TDD: `pentrep validate FILE [--strict] [--format text|json]` (FR-02): exit codes 0/1, success line `✓ … valid: N findings, N warnings`
+  > note: the scaffold `findings.yaml` is the PRD §4.2.3 example byte for byte (a test checks this).
+  > Conflicts exit 1 and nothing is written. A write failure exits 3. The wheel includes `pentrep/scaffold/**`.
+- [x] M2.11 TDD: `pentrep validate FILE [--strict] [--format text|json]` (FR-02): exit codes 0/1, success line `✓ … valid: N findings, N warnings`
   files: `src/pentrep/cli.py`, `tests/cli/test_validate.py`
-- [ ] M2.12 TDD: `pentrep schema [-o FILE]` (FR-04); test that the output validates the scaffold and rejects schema-error fixtures. Needs the dev dep `jsonschema` **(needs approval)**
+  > note: text mode writes diagnostics and a `✗ FILE is invalid: N errors, M warnings` summary to stderr;
+  > the `✓` success line goes to stdout. The fixture goldens (M2.8) now hold real `validate` stderr. A missing
+  > FILE, a directory, or a bad `--format` is a usage error (exit 2).
+- [x] M2.12 TDD: `pentrep schema [-o FILE]` (FR-04); test that the output validates the scaffold and rejects schema-error fixtures. Needs the dev dep `jsonschema` **(needs approval)**
   files: `src/pentrep/cli.py`, `tests/cli/test_schema.py`, `pyproject.toml`, `uv.lock`
-- [ ] M2.13 Docs: `docs/errors.md` (every code with an example and fix), `docs/schema.md`, and the NFR-13 test that compares `docs/errors.md` with `ErrorCode`
+  > note: the user approved `jsonschema` on 2026-11-26 (added in M2.1). "Pure schema error" fixtures are
+  > `e101_*`, `e102_*`, `e103_*` and `e106_*`. The rules E104/E105/E206/E3xx cannot be written in JSON Schema.
+  > `-o FILE` prints `Wrote FILE`.
+- [x] M2.13 Docs: `docs/errors.md` (every code with an example and fix), `docs/schema.md`, and the NFR-13 test that compares `docs/errors.md` with `ErrorCode`
   files: `docs/errors.md`, `docs/schema.md`, `tests/unit/test_docs.py`
-- [ ] M2.14 verify: `uv run pytest && uv run pentrep init tmp/m2 && uv run pentrep validate tmp/m2/findings.yaml` (exit 0, "0 warnings") `&& ! uv run pentrep validate tests/fixtures/invalid/e101_unknown_field.yaml` (exit 1, shows file:line:col + "did you mean") `&& uv run pentrep schema > /dev/null`
+  > note: there is also a test that every example line in `errors.md` quoted from a fixture matches
+  > that fixture's golden, and the README now has a usage section. E304 is documented ahead of M4.
+- [x] M2.14 verify: `uv run pytest && uv run pentrep init tmp/m2 && uv run pentrep validate tmp/m2/findings.yaml` (exit 0, "0 warnings") `&& ! uv run pentrep validate tests/fixtures/invalid/e101_unknown_field.yaml` (exit 1, shows file:line:col + "did you mean") `&& uv run pentrep schema > /dev/null`
+  > note: (2026-11-26): passed locally: 346 tests, 98.94 % coverage. `init` and `validate` exit 0 with
+  > "2 findings, 0 warnings"; the e101 fixture exits 1 and shows file:line:col plus "did you mean"; `schema`
+  > exits 0. CI has not run yet because the branch is not pushed.
 
 ## M3 — CVSS 3.1 calculator
 Runnable at the end: `pentrep validate` scores each finding and prints the severity breakdown; invalid vectors produce E2xx errors with hints.

@@ -1,0 +1,2 @@
+w102_no_evidence.yaml:18:5: warning[W102] findings[0]: finding PT-001 has no evidence
+✗ w102_no_evidence.yaml is invalid: 0 errors, 1 warning (--strict treats warnings as errors)
